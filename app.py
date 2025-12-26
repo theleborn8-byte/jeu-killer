@@ -43,20 +43,17 @@ class Partie:
         return self.joueurs[self.joueur_actuel_idx]
 
     def verifier_victoire(self):
-        # MODIFICATION ICI : On survit tant qu'on est >= 0.
-        # On n'est "éliminé" (pour le calcul de fin) que si on est < 0.
+        # On est vivant tant qu'on est >= 0
         survivants = [j for j in self.joueurs if j.pv >= 0]
         
         if len(self.joueurs) > 1:
             if len(survivants) == 1:
-                # Un seul joueur n'est pas négatif -> C'est le vainqueur
                 self.vainqueur = survivants[0].nom
                 self.etat = "FIN"
                 self.message = f"🏆 VICTOIRE ! {self.vainqueur} est le dernier survivant !"
                 self.broadcast_etat()
                 return True
             elif len(survivants) == 0:
-                # Tout le monde est négatif
                 self.vainqueur = "Personne"
                 self.etat = "FIN"
                 self.message = "Tout le monde est dans le négatif... Match nul ?"
@@ -71,6 +68,7 @@ class Partie:
         self.des_gardes = []
         self.des_sur_table = []
         
+        # Pause avant le tour suivant (Popup "C'est à toi")
         self.etat = "TRANSITION_TOUR"
         self.broadcast_etat(f"Au tour de {self.get_joueur_actuel().nom} de jouer.")
 
@@ -144,6 +142,7 @@ def handle_disconnect():
     if joueur_parti:
         jeu.joueurs.remove(joueur_parti)
         
+        # Si le créateur part, on transmet la couronne
         if jeu.createur_sid == request.sid:
             if len(jeu.joueurs) > 0:
                 jeu.createur_sid = jeu.joueurs[0].sid
@@ -163,6 +162,7 @@ def handle_rejoindre(nom):
     nouveau = Joueur(request.sid, nom)
     jeu.joueurs.append(nouveau)
     
+    # Le premier joueur devient créateur
     if jeu.createur_sid is None:
         jeu.createur_sid = nouveau.sid
         
@@ -176,6 +176,7 @@ def handle_demarrer():
     starter_idx = 0
     log = []
     
+    # Calcul des PV initiaux
     for idx, j in enumerate(jeu.joueurs):
         lancer = [random.randint(1, 6) for _ in range(5)]
         total = sum(lancer)
@@ -185,6 +186,7 @@ def handle_demarrer():
             min_pv = total
             starter_idx = idx
             
+    # Réorganiser l'ordre (le plus petit commence)
     jeu.joueurs = jeu.joueurs[starter_idx:] + jeu.joueurs[:starter_idx]
     socketio.emit('notification', {'msg': "PV Initiaux : " + ", ".join(log)})
     
@@ -197,6 +199,7 @@ def handle_valider_debut_tour():
     joueur = jeu.get_joueur_actuel()
     if request.sid != joueur.sid or jeu.etat != "TRANSITION_TOUR": return
     
+    # Le joueur a cliqué sur "C'est parti", on lance les dés
     jeu.etat = "TOUR_CHOIX"
     jeu.lancer_des(5)
     jeu.broadcast_etat("C'est parti !")
@@ -211,6 +214,7 @@ def handle_garder(indices):
     indices.sort(reverse=True)
     for i in indices: jeu.des_gardes.append(jeu.des_sur_table.pop(i))
     
+    # Si on a gardé 5 dés, on calcule le résultat
     if len(jeu.des_gardes) == 5:
         score = sum(jeu.des_gardes)
         joueur = jeu.get_joueur_actuel()
@@ -220,7 +224,10 @@ def handle_garder(indices):
             jeu.valeur_killer = score - 24
             joueur.pv += jeu.valeur_killer
             msg += f"KILLER {jeu.valeur_killer} ! Tu gagnes {jeu.valeur_killer} PV. À l'attaque !"
-            socketio.emit('notification', {'msg': msg})
+            
+            # --- SON : SWORD ---
+            socketio.emit('notification', {'msg': msg, 'sound': 'sword'})
+            
             jeu.init_phase_attaque() 
         elif score == 24:
             socketio.emit('notification', {'msg': msg + "Rien ne se passe."})
@@ -228,7 +235,10 @@ def handle_garder(indices):
         else:
             perte = 24 - score
             joueur.pv -= perte
-            socketio.emit('notification', {'msg': msg + f"Échec. -{perte} PV."})
+            
+            # --- SON : OOF ---
+            socketio.emit('notification', {'msg': msg + f"Échec. -{perte} PV.", 'sound': 'oof'})
+            
             jeu.passer_au_joueur_suivant()
     else:
         jeu.lancer_des(5 - len(jeu.des_gardes))
@@ -275,6 +285,7 @@ def handle_garder_attaque(indices):
     des_restants = 5 - len(jeu.des_gardes)
 
     if des_restants == 0:
+        # REGLE DU FULL (5 dés gardés = 5 nouveaux dés)
         jeu.des_gardes = [] 
         socketio.emit('notification', {'msg': "🔥 FULL ! 5 dés gardés ! Tu gagnes 5 nouveaux dés ! 🔥"})
         jeu.lancer_des(5) 
@@ -300,7 +311,8 @@ def finir_victime():
     victime = jeu.joueurs[jeu.victime_actuelle_idx]
     if jeu.degats_accumules > 0:
         victime.pv -= jeu.degats_accumules
-        socketio.emit('notification', {'msg': f"💥 BOOM ! {jeu.degats_accumules} dégâts infligés à {victime.nom} !"})
+        # --- SON : PUNCH ---
+        socketio.emit('notification', {'msg': f"💥 BOOM ! {jeu.degats_accumules} dégâts infligés à {victime.nom} !", 'sound': 'punch'})
     
     jeu.etat = "RESULTAT_ATTAQUE"
     jeu.broadcast_etat(f"Attaque terminée. Total dégâts : {jeu.degats_accumules}.")
@@ -313,6 +325,7 @@ def handle_suivant():
 
 @socketio.on('reset_partie')
 def handle_reset():
+    # Sécurité : Seul le créateur peut reset
     if jeu.createur_sid != request.sid:
         emit('erreur', "Seul le créateur de la partie peut arrêter le jeu !")
         return

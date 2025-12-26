@@ -14,22 +14,12 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: flex; flex-direction: column; align-items: center;
         }
         
-        /* BOUTON SON (Haut Gauche) */
+        /* BOUTON SON */
         #sound-btn {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(0,0,0,0.5);
-            color: white;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            font-size: 24px;
-            cursor: pointer;
-            z-index: 3000;
-            display: flex; justify-content: center; align-items: center;
-            transition: all 0.2s;
+            position: absolute; top: 20px; left: 20px;
+            background: rgba(0,0,0,0.5); color: white; border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; z-index: 3000;
+            display: flex; justify-content: center; align-items: center; transition: all 0.2s;
         }
         #sound-btn:hover { background: rgba(0,0,0,0.8); transform: scale(1.1); }
         .sound-off { opacity: 0.5; text-decoration: line-through; color: #e74c3c; }
@@ -225,10 +215,13 @@
 
         // GESTION DU SON
         let isMuted = false;
-        // Chemins vers le dossier static
+        
+        // Charger les sons
         const audioDice = new Audio('/static/dice.mp3');
-        const audioSword = new Audio('/static/sword.mp3');
-        const audioWin = new Audio('/static/win.mp3');
+        const audioSword = new Audio('/static/sword.mp3'); // Devenir Killer
+        const audioPunch = new Audio('/static/punch.mp3'); // Frapper l'autre
+        const audioOof = new Audio('/static/oof.mp3');     // Se blesser soi-même
+        const audioWin = new Audio('/static/win.mp3');     // Victoire
         
         function toggleMute() {
             isMuted = !isMuted;
@@ -247,11 +240,13 @@
             let snd;
             if (type === 'dice') snd = audioDice;
             else if (type === 'sword') snd = audioSword;
+            else if (type === 'punch') snd = audioPunch;
+            else if (type === 'oof') snd = audioOof;
             else if (type === 'win') snd = audioWin;
             
             if (snd) {
-                snd.currentTime = 0; // Rembobiner si déjà en cours
-                snd.play().catch(e => console.log("Audio bloqué par navigateur:", e));
+                snd.currentTime = 0; // Rembobiner
+                snd.play().catch(e => console.log("Audio auto-play prevented:", e));
             }
         }
 
@@ -356,7 +351,7 @@
             if (data.etat === "FIN") {
                 document.getElementById('victory-overlay').style.display = "flex";
                 document.getElementById('winner-name').innerText = "Vainqueur : " + data.vainqueur;
-                playSound('win'); // SON VICTOIRE
+                playSound('win'); 
                 return;
             } else {
                 document.getElementById('victory-overlay').style.display = "none";
@@ -371,7 +366,7 @@
             const isNewRoll = (currentDiceStr !== lastDiceStr && data.des_table.length > 0);
             
             if (isNewRoll) {
-                // SON DE DÉS SEULEMENT SI CE SONT DES NOUVEAUX DÉS
+                // SON DE DÉS
                 playSound('dice');
                 selectedIndices = [];
                 lastDiceStr = currentDiceStr;
@@ -463,14 +458,14 @@
             }
         });
 
-        // NOTIFICATIONS & SON EPEE
+        // RECEPTION NOTIFICATIONS ET DECLENCHEMENT SONS
         socket.on('notification', (data) => {
             const logs = document.getElementById('logs');
             logs.innerHTML = `<div>> ${data.msg}</div>` + logs.innerHTML;
             
-            // Detection simple pour le son d'épée
-            if (data.msg.includes('KILLER') || data.msg.includes('dégâts') || data.msg.includes('BOOM')) {
-                playSound('sword');
+            // Si le serveur a envoyé un signal de son spécifique
+            if (data.sound) {
+                playSound(data.sound);
             }
         });
         socket.on('erreur', (msg) => alert(msg));
