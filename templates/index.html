@@ -6,155 +6,142 @@
     <title>Le Killer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
-        /* STYLE GENERAL */
+        /* CSS GENERAL */
         body { font-family: 'Segoe UI', sans-serif; background: #2c3e50; color: white; text-align: center; margin: 0; padding: 20px; overflow-y: scroll; }
-        .container { max-width: 900px; margin: 0 auto; }
-        .card { 
-            background: #34495e; padding: 20px; border-radius: 15px; margin-bottom: 20px; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: flex; flex-direction: column; align-items: center;
-        }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .card { background: #34495e; padding: 20px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: flex; flex-direction: column; align-items: center; position: relative; }
         
-        /* BOUTON SON */
-        #sound-btn {
-            position: absolute; top: 20px; left: 20px;
-            background: rgba(0,0,0,0.5); color: white; border: 2px solid rgba(255,255,255,0.3);
-            border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; z-index: 3000;
-            display: flex; justify-content: center; align-items: center; transition: all 0.2s;
-        }
-        #sound-btn:hover { background: rgba(0,0,0,0.8); transform: scale(1.1); }
-        .sound-off { opacity: 0.5; text-decoration: line-through; color: #e74c3c; }
+        /* ACCUEIL */
+        .home-layout { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; width: 100%; }
+        .home-panel { flex: 1; min-width: 300px; background: rgba(0,0,0,0.2); padding: 20px; border-radius: 10px; }
+        #game-list { list-style: none; padding: 0; max-height: 300px; overflow-y: auto; text-align: left; }
+        .game-item { background: #2c3e50; padding: 10px; margin: 5px 0; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #455a64; }
+        .game-item.active { border-left: 5px solid #27ae60; } 
+        .join-btn-small { padding: 5px 10px; font-size: 0.8em; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; }
 
-        /* ZONES FIXES */
-        #top-info-zone { width: 100%; height: 110px; display: flex; flex-direction: column; justify-content: center; align-items: center; margin-bottom: 10px; }
-        #kept-dice-zone { width: 100%; height: 90px; display: flex; flex-direction: column; justify-content: center; align-items: center; border-top: 1px solid rgba(255,255,255,0.1); border-bottom: 1px solid rgba(255,255,255,0.1); }
-        #table-container { height: 340px; width: 100%; display: flex; justify-content: center; align-items: center; position: relative; margin-top: 20px; }
-        #actions-area { width: 100%; height: 80px; display: flex; justify-content: center; align-items: center; margin-top: 20px; }
-
-        /* ELEMENTS VISUELS */
+        /* ELEMENTS JEU & STRUCTURE FIXE */
+        /* FIX VISUEL : Hauteur fixe pour éviter la "balade" */
+        #top-info-zone { width: 100%; height: 110px; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 10px; }
+        
         .info-panel { font-size: 1.3em; color: #f39c12; font-weight: bold; margin: 5px 0; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
         #killer-panel { border: 2px solid #c0392b; padding: 5px 15px; border-radius: 10px; background: rgba(192, 57, 43, 0.15); animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity:0; transform: translateY(-10px); } to { opacity:1; transform: translateY(0); } }
 
         /* DÉS */
+        /* FIX VISUEL : Hauteur fixe pour la zone des dés gardés */
+        #kept-dice-zone { width: 100%; height: 90px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; margin-bottom: 5px; }
+        #kept-label { font-size: 0.8em; color: #aaa; margin-bottom: 5px; }
+        
         .dice { 
             display: flex; justify-content: center; align-items: center;
             width: 60px; height: 60px; background: white; color: black; 
             font-size: 35px; font-weight: bold; margin: 0 8px; border-radius: 12px; 
             cursor: pointer; border: 4px solid #bdc3c7; user-select: none;
-            position: relative; z-index: 10; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: transform 0.1s;
+            position: relative; z-index: 10; box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
+            transition: transform 0.1s;
         }
         .dice:active { transform: scale(0.95); }
-        .rolling { animation: rollDice 0.6s ease-out; }
-        @keyframes rollDice { 0% { transform: scale(0) rotate(0deg); opacity: 0; } 50% { transform: scale(1.2) rotate(360deg); } 100% { transform: scale(1) rotate(720deg); opacity: 1; } }
         .dice.selected { border-color: #e67e22; background: #ecf0f1; transform: scale(1.1); box-shadow: 0 0 15px #e67e22; z-index: 11; }
         .dice-kept { background: #27ae60; color: white; border-color: #2ecc71; cursor: default; }
         .dice-attack { background: #c0392b; color: white; border-color: #e74c3c; cursor: default; }
         .dice-disabled { opacity: 0.5; filter: grayscale(100%); cursor: default; }
-
-        /* TAPIS */
-        #table-dice-area {
-            width: 320px; height: 320px; background: #218c53; 
-            border: 12px solid #574b90; border-radius: 50%;
-            display: flex; flex-wrap: wrap; justify-content: center; align-content: center;
-            position: relative; box-shadow: inset 0 0 40px rgba(0,0,0,0.5), 0 10px 25px rgba(0,0,0,0.4);
-        }
-        #table-dice-area::before {
-            content: ""; position: absolute; top:0; left:0; right:0; bottom:0;
-            border-radius: 50%; opacity: 0.15; pointer-events: none; z-index: 0;
-            background-image: repeating-linear-gradient(45deg, #000 0, #000 1px, transparent 0, transparent 50%);
-            background-size: 10px 10px;
+        .rolling { animation: rollDice 0.2s ease-out; }
+        @keyframes rollDice { 
+            0% { transform: scale(0) rotate(0deg); opacity: 0; } 
+            100% { transform: scale(1) rotate(360deg); opacity: 1; } 
         }
 
-        /* SCORE BUBBLE */
-        #selection-sum {
-            position: absolute; top: 10px; right: 10px; background: white; color: black;
-            padding: 8px 18px; border-radius: 20px; font-weight: bold; font-size: 1.4em;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.5); display: none; z-index: 20; transition: all 0.2s;
+        #table-dice-area { width: 320px; height: 320px; background: #218c53; border: 12px solid #574b90; border-radius: 50%; display: flex; flex-wrap: wrap; justify-content: center; align-content: center; position: relative; box-shadow: inset 0 0 40px rgba(0,0,0,0.5), 0 10px 25px rgba(0,0,0,0.4); }
+        #table-dice-area::before { content: ""; position: absolute; top:0; left:0; right:0; bottom:0; border-radius: 50%; opacity: 0.15; pointer-events: none; z-index: 0; background-image: repeating-linear-gradient(45deg, #000 0, #000 1px, transparent 0, transparent 50%); background-size: 10px 10px; }
+        
+        #selection-sum { 
+            position: absolute; top: 20px; right: 20px; background: white; color: black; 
+            padding: 8px 18px; border-radius: 20px; font-weight: bold; font-size: 1.4em; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5); display: none; z-index: 100; transition: all 0.2s; 
         }
         .sum-attack { color: #c0392b !important; border: 3px solid #c0392b; }
 
-        /* POPUP CHANGEMENT DE TOUR */
-        #turn-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.2); 
-            display: none; justify-content: center; align-items: center; z-index: 2000;
+        /* FIX VISUEL : Hauteur fixe pour la zone actions */
+        #actions-area { width: 100%; height: 70px; display: flex; justify-content: center; align-items: center; margin-top: 15px; }
+
+        /* OVERLAYS */
+        #turn-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: none; 
+            display: none; justify-content: center; align-items: center; z-index: 2000; 
+            pointer-events: none; 
         }
-        .turn-card {
-            background: white; color: #333;
-            padding: 30px 50px; border-radius: 20px;
-            text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            animation: slideUp 0.3s ease-out;
-            min-width: 300px;
+        
+        .turn-card { 
+            pointer-events: auto; 
+            background: white; color: #333; padding: 30px 50px; border-radius: 20px; 
+            text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
+            animation: slideUp 0.3s ease-out; min-width: 300px; 
         }
-        .turn-title { font-size: 1.5em; color: #7f8c8d; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+        .turn-label { font-size: 1.2em; color: #7f8c8d; text-transform: uppercase; margin-bottom: 10px; }
         .turn-player-name { font-size: 2.5em; font-weight: bold; color: #2c3e50; margin-bottom: 20px; }
         @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        #btn-overlay-action { box-shadow: none !important; font-size: 1.2em; padding: 15px 30px; }
 
-        /* ALERTE TOUR FLASH */
-        #turn-alert {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(46, 204, 113, 0.95);
-            color: white; padding: 30px 60px; border-radius: 20px;
-            font-size: 3em; font-weight: bold; text-transform: uppercase;
-            box-shadow: 0 0 50px rgba(46, 204, 113, 0.8);
-            z-index: 2000; pointer-events: none; display: none;
-            animation: popTurn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            text-shadow: 2px 2px 0px #27ae60;
-        }
-        @keyframes popTurn { from { transform: translate(-50%, -50%) scale(0); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
-
-        /* OVERLAY VICTOIRE */
-        #victory-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 1000;
-        }
+        /* VICTOIRE */
+        #victory-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 1000; }
         .victory-card { background: white; padding: 40px; border-radius: 20px; text-align: center; box-shadow: 0 0 50px rgba(255, 215, 0, 0.8); animation: zoomIn 0.5s ease-out; }
         .victory-title { color: #d4af37; font-size: 3em; margin: 0; text-transform: uppercase; text-shadow: 2px 2px 0px #000; }
         .victory-name { color: #333; font-size: 2em; margin-top: 20px; font-weight: bold; }
         @keyframes zoomIn { from { transform: scale(0); } to { transform: scale(1); } }
 
-        /* BUTTONS & PLAYERS */
-        .btn { padding: 12px 24px; font-size: 18px; cursor: pointer; background: #e67e22; border: none; color: white; border-radius: 8px; font-weight: bold; transition: background 0.2s; }
+        #turn-alert { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(46, 204, 113, 0.95); color: white; padding: 30px 60px; border-radius: 20px; font-size: 3em; font-weight: bold; text-transform: uppercase; box-shadow: 0 0 50px rgba(46, 204, 113, 0.8); z-index: 2000; pointer-events: none; display: none; animation: popTurn 0.5s; text-shadow: 2px 2px 0px #27ae60; }
+        @keyframes popTurn { from { transform: translate(-50%, -50%) scale(0); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+
+        /* UI GENERALE */
+        .btn { padding: 12px 24px; font-size: 18px; cursor: pointer; background: #e67e22; border: none; color: white; border-radius: 8px; font-weight: bold; transition: background 0.2s; margin: 5px; }
         .btn:hover { background: #d35400; }
-        .btn-green { background: #27ae60; width: 100%; font-size: 1.2em; padding: 15px;}
-        .btn-green:hover { background: #219150; }
-        .btn-action { width: 100%; max-width: 350px; padding: 15px; font-size: 20px; }
-        .btn-attack { background: #c0392b; } .btn-attack:hover { background: #a93226; }
-        .btn-next { background: #8e44ad; } .btn-next:hover { background: #71368a; }
+        .btn-green { background: #27ae60; } .btn-green:hover { background: #219150; }
+        .btn-red { background: #c0392b; } .btn-red:hover { background: #a93226; }
+        .btn-orange { background: #d35400; } .btn-orange:hover { background: #e67e22; }
         
-        .player-list { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; width: 100%; min-height: 80px; align-items: center; }
         .player { background: #16a085; padding: 10px; margin: 5px; border-radius: 5px; min-width: 100px; display:inline-block; transition: all 0.3s; position: relative; }
         .player.active { border: 3px solid #f1c40f; transform: scale(1.05); box-shadow: 0 0 15px #f1c40f; z-index: 5;}
         .player-pv { font-weight: bold; font-size: 1.2em; }
         .negative { color: #ffadad; }
         .crown { position: absolute; top: -15px; right: -10px; font-size: 24px; transform: rotate(20deg); text-shadow: 0 2px 5px rgba(0,0,0,0.3); z-index: 20;}
-
         #logs { width: 100%; height: 120px; overflow-y: auto; background: #222; text-align: left; padding: 10px; font-family: monospace; color: #ddd; border-radius: 5px; box-sizing: border-box; }
-
+        #room-info-bar { margin-bottom:10px; font-size:0.9em; color:#bdc3c7; cursor:pointer;}
+        input[type="text"] { padding: 12px; border-radius: 5px; border: none; width: 80%; margin-bottom: 10px; font-size: 16px; }
+        
+        #sound-btn { 
+            position: absolute; top: 20px; left: 20px; 
+            font-size: 24px; cursor: pointer; background: rgba(0,0,0,0.5); 
+            width: 50px; height: 50px; border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; 
+            border: 2px solid white; z-index:3000; 
+        }
     </style>
 </head>
 <body>
     
-    <button id="sound-btn" onclick="toggleMute()">🔊</button>
-
     <div id="turn-alert">C'EST À TOI !</div>
 
     <div id="turn-overlay">
         <div class="turn-card">
-            <div class="turn-title">C'est au tour de</div>
-            <div id="turn-player-name" class="turn-player-name">...</div>
-            <button id="btn-start-turn" class="btn btn-green" onclick="validerTour()">C'est parti !</button>
-            <div id="wait-msg" style="display:none; color:#7f8c8d; font-style:italic;">En attente du joueur...</div>
+            <div id="overlay-title" class="turn-label">C'est au tour de</div>
+            <div id="overlay-main-text" class="turn-player-name">...</div>
+            <button id="btn-overlay-action" class="btn btn-green">ACTION</button>
+            <div id="wait-msg" style="display:none; color:#7f8c8d; font-style:italic; margin-top:10px;">En attente du joueur...</div>
         </div>
     </div>
 
     <div id="victory-overlay">
         <div class="victory-card">
             <h1 class="victory-title">👑 Victoire 👑</h1>
-            <div id="winner-name" class="victory-name">Joueur 1</div>
+            <div id="winner-name" class="victory-name"></div>
             <br>
-            <button class="btn" onclick="quit()">Retour au menu</button>
+            <div id="creator-end-actions" style="display:none;">
+                <button class="btn btn-green" onclick="socket.emit('rejouer_partie')">🔄 Rejouer ici</button>
+                <button class="btn btn-red" onclick="socket.emit('fermer_salon')">🚪 Fermer le salon</button>
+            </div>
+            <div id="player-end-msg" style="display:none; color:#7f8c8d;">En attente du créateur du salon...</div>
         </div>
     </div>
 
@@ -163,41 +150,64 @@
 
         <div id="login-screen" class="card">
             <h2>Bienvenue</h2>
-            <input type="text" id="username" placeholder="Pseudo" style="padding:10px; border-radius:5px; border:none; width: 200px;">
-            <br><br>
-            <button class="btn" onclick="rejoindre()">Rejoindre</button>
+            <div id="home-actions" style="width:100%;">
+                <div class="home-layout">
+                    <div class="home-panel">
+                        <h3>Créer un salon</h3>
+                        <input type="text" id="new-room-name" placeholder="Nom du Salon (ex: Les Potes)">
+                        <button class="btn btn-green" onclick="creerSalon()">➕ Créer</button>
+                    </div>
+                    <div class="home-panel">
+                        <h3>Salons Publics</h3>
+                        <ul id="game-list">
+                            <li style="color:#aaa; font-style:italic;">Chargement...</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div id="join-form" style="display:none;">
+                <h3 id="join-room-title">Rejoindre le salon</h3>
+                <input type="text" id="username" placeholder="Ton Pseudo">
+                <br><br>
+                <button class="btn" onclick="rejoindre()">Rejoindre</button>
+                <br><button class="btn btn-red" style="font-size:0.8em; padding:8px;" onclick="location.reload()">Annuler</button>
+            </div>
         </div>
 
         <div id="game-screen" style="display:none;">
-            
-            <div class="player-list" id="players-display"></div>
+            <div id="room-info-bar" onclick="copierLien()">Salon : <span id="current-room-name">...</span> (Code: <span id="current-room-code">...</span>) 📋</div>
+            <div style="display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; width: 100%; min-height: 80px; align-items: center;" id="players-display"></div>
             
             <div class="card">
-                
+                <button id="sound-btn" onclick="toggleMute()">🔊</button>
+                <div id="selection-sum">0</div>
+
                 <div id="top-info-zone">
                     <div id="status-message" class="info-panel">En attente...</div>
-                    <div id="killer-panel" style="display:none;">
+                    <div id="killer-panel" style="display:none; border: 2px solid #c0392b; padding: 5px 15px; border-radius: 10px; background: rgba(192, 57, 43, 0.15);">
                         <h3 style="margin:0; color:#c0392b;">MODE KILLER (<span id="killer-val"></span>)</h3>
                         <div style="font-size: 0.9em; color: #ddd;">Cible : <strong id="target-name" style="color:white;"></strong></div>
                     </div>
                 </div>
-
+                
                 <div id="kept-dice-zone">
-                    <div id="kept-label" style="font-size:0.8em; color:#aaa; margin-bottom:5px;">Dés gardés</div>
-                    <div id="kept-dice-area" style="display:flex; justify-content:center; width:100%; height: 60px;"></div>
+                    <div id="kept-label">Dés gardés</div>
+                    <div style="display:flex; justify-content:center; width:100%; height: 60px;" id="kept-dice-area"></div>
                 </div>
-
+                
                 <div id="table-container">
-                    <div id="selection-sum">0</div>
                     <div id="table-dice-area"></div>
                 </div>
                 
                 <div id="actions-area"></div>
-
+                
+                <div style="display:grid; grid-template-columns:1fr 1fr; font-size:11px; color:#bdc3c7; gap:5px; margin-top:10px; background:rgba(0,0,0,0.2); padding:5px; border-radius:5px;">
+                    <span style="color:#2ecc71">5-10: Killer (6-1)</span><span style="color:#e74c3c">18-23: Dégâts (-6/-1)</span>
+                    <span style="color:#f1c40f">11: Regen (+1 Dé)</span><span style="color:#2ecc71">25-30: Killer (1-6)</span>
+                    <span style="color:#e74c3c">12-17: Dégâts (-1/-6)</span><span style="color:#f1c40f">24: Regen (+1 Dé)</span>
+                </div>
             </div>
-
             <div id="logs"></div>
-            
             <button id="btn-reset-game" class="btn" style="background:#7f8c8d; font-size:14px; margin-top:20px; display:none;" onclick="quit()">Arrêter la partie</button>
         </div>
     </div>
@@ -205,270 +215,154 @@
     <script>
         const socket = io();
         let mySid = "";
+        let currentRoomId = "{{ room_id }}"; 
+        let currentRoomName = "";
         let selectedIndices = [];
         let lastDiceStr = "";
+        let globalDiceValues = [], globalState = "", globalBaseScore = 0, lastCurrentPlayer = "";
         
-        let globalDiceValues = []; 
-        let globalState = ""; 
-        let globalBaseScore = 0; 
-        let lastCurrentPlayer = ""; 
-
-        // GESTION DU SON
         let isMuted = false;
-        
-        // Charger les sons
         const audioDice = new Audio('/static/dice.mp3');
-        const audioSword = new Audio('/static/sword.mp3'); // Devenir Killer
-        const audioPunch = new Audio('/static/punch.mp3'); // Frapper l'autre
-        const audioOof = new Audio('/static/oof.mp3');     // Se blesser soi-même
-        const audioWin = new Audio('/static/win.mp3');     // Victoire
+        const audioSword = new Audio('/static/sword.mp3');
+        const audioPunch = new Audio('/static/punch.mp3');
+        const audioOof = new Audio('/static/oof.mp3');
+        const audioWin = new Audio('/static/win.mp3');
         
-        function toggleMute() {
-            isMuted = !isMuted;
-            const btn = document.getElementById('sound-btn');
-            if (isMuted) {
-                btn.innerText = "🔇";
-                btn.classList.add('sound-off');
-            } else {
-                btn.innerText = "🔊";
-                btn.classList.remove('sound-off');
-            }
-        }
+        function toggleMute() { isMuted = !isMuted; document.getElementById('sound-btn').innerText = isMuted ? "🔇" : "🔊"; document.getElementById('sound-btn').classList.toggle('sound-off'); }
+        function playSound(type) { if(!isMuted) { let s={dice:audioDice,sword:audioSword,punch:audioPunch,oof:audioOof,win:audioWin}[type]; if(s){s.currentTime=0;s.play().catch(e=>{});} } }
 
-        function playSound(type) {
-            if (isMuted) return;
-            let snd;
-            if (type === 'dice') snd = audioDice;
-            else if (type === 'sword') snd = audioSword;
-            else if (type === 'punch') snd = audioPunch;
-            else if (type === 'oof') snd = audioOof;
-            else if (type === 'win') snd = audioWin;
-            
-            if (snd) {
-                snd.currentTime = 0; // Rembobiner
-                snd.play().catch(e => console.log("Audio auto-play prevented:", e));
-            }
-        }
+        window.onload = function() { if(currentRoomId) afficherFormulaireRejoindre(currentRoomId, "Salon Privé"); else socket.emit('join_hall'); };
+        function afficherFormulaireRejoindre(code, name) { currentRoomId = code; document.getElementById('home-actions').style.display = 'none'; document.getElementById('join-form').style.display = 'block'; document.getElementById('join-room-title').innerText = "Rejoindre : " + name; const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?room=' + code; window.history.pushState({path:newUrl},'',newUrl); }
+        function creerSalon() { const name = document.getElementById('new-room-name').value || "Salon Sans Nom"; socket.emit('creer_salon', {nom_salon: name}); }
+        socket.on('salon_cree', (data) => { afficherFormulaireRejoindre(data.room_id, document.getElementById('new-room-name').value || "Mon Salon"); });
+        socket.on('update_game_list', (liste) => { const ul = document.getElementById('game-list'); ul.innerHTML = ""; if(liste.length === 0) { ul.innerHTML = "<li style='color:#aaa; padding:10px;'>Aucun salon en cours. Crées-en un !</li>"; return; } liste.forEach(game => { const li = document.createElement('li'); let statusClass = (game.statut === "En attente") ? "waiting" : "active"; li.className = `game-item ${statusClass}`; li.innerHTML = `<div><strong>${game.nom}</strong> <br><small>${game.statut} - ${game.nb_joueurs} Joueurs</small></div><button class="join-btn-small" onclick="afficherFormulaireRejoindre('${game.id}', '${game.nom}')">Rejoindre</button>`; ul.appendChild(li); }); });
+        function copierLien() { navigator.clipboard.writeText(window.location.href).then(() => alert("Lien copié !")); }
+        function rejoindre() { const nom = document.getElementById('username').value; if(nom && currentRoomId) { socket.emit('rejoindre', {nom: nom, room_id: currentRoomId}); document.getElementById('login-screen').style.display = 'none'; document.getElementById('game-screen').style.display = 'block'; } }
 
         socket.on('connect', () => { mySid = socket.id; });
-        
-        function rejoindre() {
-            const nom = document.getElementById('username').value;
-            if(nom) {
-                socket.emit('rejoindre', nom);
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('game-screen').style.display = 'block';
-            }
-        }
+        socket.on('force_quit', () => { alert("Le salon a été fermé."); location.href = "/"; });
+        socket.on('force_reset', () => { document.getElementById('victory-overlay').style.display = 'none'; document.getElementById('logs').innerHTML = ""; });
 
         const actions = {
             demarrer: () => socket.emit('demarrer_partie'),
-            garder: () => {
-                if(!selectedIndices.length) return alert("Choisis au moins un dé !");
-                socket.emit('action_garder', selectedIndices);
-            },
+            garder: () => { if(!selectedIndices.length) return alert("Sélectionne !"); socket.emit('action_garder', selectedIndices); },
             lancerAttaque: () => socket.emit('action_lancer_attaque'),
-            garderAttaque: () => {
-                if(!selectedIndices.length) return alert("Choisis au moins un dé Killer !");
-                socket.emit('action_garder_attaque', selectedIndices);
-            },
-            suivant: () => socket.emit('action_suivant')
+            garderAttaque: () => { if(!selectedIndices.length) return alert("Sélectionne !"); socket.emit('action_garder_attaque', selectedIndices); },
+            suivant: () => socket.emit('action_suivant'),
+            lancerRegen: () => socket.emit('action_lancer_regen'),
+            finRegen: () => socket.emit('action_fin_regen'),
+            terminerAttaque: () => socket.emit('action_terminer_attaque')
         };
         
-        function validerTour() { socket.emit('valider_debut_tour'); }
-
-        function toggle(idx, el) {
-            if(selectedIndices.includes(idx)) {
-                selectedIndices = selectedIndices.filter(i => i !== idx);
-                el.classList.remove('selected');
-            } else {
-                selectedIndices.push(idx);
-                el.classList.add('selected');
-            }
-            updateSumDisplay();
-        }
-
-        function updateSumDisplay() {
-            const bubble = document.getElementById('selection-sum');
-            let selectedSum = 0;
-            selectedIndices.forEach(i => { selectedSum += globalDiceValues[i]; });
-            let total = globalBaseScore + selectedSum;
-
-            if (total === 0) { bubble.style.display = 'none'; return; }
-
-            if (globalState === "TOUR_ATTAQUE") {
-                bubble.innerText = "+" + total + " Dégâts";
-                bubble.classList.add('sum-attack');
-                bubble.style.color = '#c0392b';
-            } else {
-                bubble.innerText = "Total: " + total;
-                bubble.classList.remove('sum-attack');
-                bubble.style.color = 'black';
-            }
-            bubble.style.display = 'block';
-        }
-        
-        function triggerTurnAlert() {
-            const alertBox = document.getElementById('turn-alert');
-            alertBox.style.display = 'block';
-            setTimeout(() => { alertBox.style.display = 'none'; }, 1500);
-        }
-
-        function quit() { if(confirm("Attention : Cela va arrêter la partie pour TOUT LE MONDE. Continuer ?")) socket.emit('reset_partie'); }
-        socket.on('force_reset', () => location.reload());
+        function toggle(idx, el) { if(selectedIndices.includes(idx)) { selectedIndices = selectedIndices.filter(i => i !== idx); el.classList.remove('selected'); } else { selectedIndices.push(idx); el.classList.add('selected'); } updateSumDisplay(); }
+        function updateSumDisplay() { const bubble = document.getElementById('selection-sum'); let s = 0; selectedIndices.forEach(i => s += globalDiceValues[i]); let t = globalBaseScore + s; if(t===0){ bubble.style.display='none'; return; } if(globalState==="TOUR_ATTAQUE") { bubble.innerText="+"+t+" Dégâts"; bubble.className="sum-attack"; bubble.style.color='#c0392b'; } else { bubble.innerText="Total: "+t; bubble.className=""; bubble.style.color='black'; } bubble.style.display='block'; }
+        function triggerTurnAlert() { const alertBox = document.getElementById('turn-alert'); alertBox.style.display = 'block'; setTimeout(() => { alertBox.style.display = 'none'; }, 1500); }
+        function quit() { if(confirm("Voulez-vous vraiment arrêter la partie et fermer le salon ?")) socket.emit('fermer_salon'); }
 
         socket.on('update_jeu', (data) => {
             const isMe = (data.joueur_actuel_sid === mySid);
             const isCreator = (data.createur_sid === mySid);
-            globalDiceValues = data.des_table;
-            globalState = data.etat;
-
-            if (isCreator) document.getElementById('btn-reset-game').style.display = 'inline-block';
-            else document.getElementById('btn-reset-game').style.display = 'none';
-
-            // GESTION POPUP CHANGEMENT TOUR
-            if (data.etat === "TRANSITION_TOUR") {
-                document.getElementById('turn-overlay').style.display = 'flex';
-                document.getElementById('turn-player-name').innerText = data.joueur_actuel;
-                
-                if (isMe) {
-                    document.getElementById('btn-start-turn').style.display = 'inline-block';
-                    document.getElementById('wait-msg').style.display = 'none';
-                } else {
-                    document.getElementById('btn-start-turn').style.display = 'none';
-                    document.getElementById('wait-msg').style.display = 'block';
-                }
-            } else {
-                document.getElementById('turn-overlay').style.display = 'none';
-            }
-
-            if (data.joueur_actuel !== lastCurrentPlayer) {
-                if (isMe && data.etat === "TRANSITION_TOUR") triggerTurnAlert();
-                lastCurrentPlayer = data.joueur_actuel;
-            }
-
-            // GESTION SON VICTOIRE
-            if (data.etat === "FIN") {
-                document.getElementById('victory-overlay').style.display = "flex";
-                document.getElementById('winner-name').innerText = "Vainqueur : " + data.vainqueur;
-                playSound('win'); 
-                return;
-            } else {
-                document.getElementById('victory-overlay').style.display = "none";
-            }
-
-            // SCORE
-            if (data.etat === "TOUR_ATTAQUE") globalBaseScore = data.degats_accumules;
-            else if (data.etat === "TOUR_CHOIX") globalBaseScore = data.des_gardes.reduce((a, b) => a + b, 0);
-            else globalBaseScore = 0;
-
-            const currentDiceStr = JSON.stringify(data.des_table);
-            const isNewRoll = (currentDiceStr !== lastDiceStr && data.des_table.length > 0);
+            globalDiceValues = data.des_table; globalState = data.etat;
             
-            if (isNewRoll) {
-                // SON DE DÉS
-                playSound('dice');
-                selectedIndices = [];
-                lastDiceStr = currentDiceStr;
+            document.getElementById('current-room-name').innerText = data.nom_salon; document.getElementById('current-room-code').innerText = data.room_id;
+            document.getElementById('btn-reset-game').style.display = isCreator ? 'inline-block' : 'none';
+
+            // --- GESTION OVERLAY GENÉRIQUE ---
+            const overlay = document.getElementById('turn-overlay');
+            const title = document.getElementById('overlay-title');
+            const mainText = document.getElementById('overlay-main-text');
+            const btnAction = document.getElementById('btn-overlay-action');
+            const waitMsg = document.getElementById('wait-msg');
+
+            let showOverlay = false;
+
+            if (data.etat === "TRANSITION_TOUR") {
+                showOverlay = true;
+                title.innerText = "C'est au tour de";
+                mainText.innerText = data.joueur_actuel;
+                btnAction.innerText = "Lancer les dés";
+                btnAction.className = "btn btn-green";
+                btnAction.onclick = () => socket.emit('valider_debut_tour');
+                if (isMe) { btnAction.style.display = 'inline-block'; waitMsg.style.display = 'none'; if (data.joueur_actuel !== lastCurrentPlayer) triggerTurnAlert(); } else { btnAction.style.display = 'none'; waitMsg.style.display = 'block'; waitMsg.innerText = "En attente de " + data.joueur_actuel + "..."; }
+                lastCurrentPlayer = data.joueur_actuel;
+            } else if (data.etat === "ATTENTE_LANCER") {
+                showOverlay = true;
+                title.innerText = "Cible verrouillée !";
+                mainText.innerText = "Attaque sur " + data.nom_victime;
+                btnAction.innerText = "Lancer les dés"; 
+                btnAction.className = "btn btn-red";
+                btnAction.onclick = () => socket.emit('action_lancer_attaque');
+                if (isMe) { btnAction.style.display = 'inline-block'; waitMsg.style.display = 'none'; } else { btnAction.style.display = 'none'; waitMsg.style.display = 'block'; waitMsg.innerText = data.joueur_actuel + " va attaquer " + data.nom_victime + "..."; }
+            } else if (data.etat === "TOUR_REGEN") {
+                showOverlay = true;
+                title.innerText = "Phase de Soin";
+                mainText.innerText = "Régénération";
+                btnAction.innerText = "Lancer le dé de Vie";
+                btnAction.className = "btn btn-green";
+                btnAction.onclick = () => socket.emit('action_lancer_regen');
+                if (isMe) { btnAction.style.display = 'inline-block'; waitMsg.style.display = 'none'; } else { btnAction.style.display = 'none'; waitMsg.style.display = 'block'; waitMsg.innerText = data.joueur_actuel + " tente de se soigner..."; }
             }
+            overlay.style.display = showOverlay ? 'flex' : 'none';
+
+            if (data.etat === "FIN") { document.getElementById('victory-overlay').style.display = "flex"; document.getElementById('winner-name').innerText = data.vainqueur; document.getElementById('creator-end-actions').style.display = isCreator ? 'block' : 'none'; document.getElementById('player-end-msg').style.display = isCreator ? 'none' : 'block'; playSound('win'); return; } else { document.getElementById('victory-overlay').style.display = "none"; }
+
+            if (data.etat === "TOUR_ATTAQUE" || data.etat === "FIN_ATTAQUE") globalBaseScore = data.degats_accumules;
+            else if (data.etat === "TOUR_CHOIX") globalBaseScore = data.des_gardes.reduce((a,b)=>a+b,0);
+            else globalBaseScore = 0;
+            
+            const currentDiceStr = JSON.stringify(data.des_table);
+            const isNew = (currentDiceStr !== lastDiceStr && data.des_table.length > 0);
+            if(isNew) { playSound('dice'); selectedIndices=[]; lastDiceStr=currentDiceStr; }
             updateSumDisplay();
 
-            // 1. Joueurs
-            const pDiv = document.getElementById('players-display');
-            pDiv.innerHTML = "";
-            data.joueurs.forEach(p => {
-                let cls = "player" + (p.nom === data.joueur_actuel ? " active" : "");
-                let pvCls = p.pv < 0 ? "negative" : ""; 
-                let crownHtml = (p.sid === data.createur_sid) ? "<div class='crown'>👑</div>" : "";
-                
-                pDiv.innerHTML += `
-                    <div class="${cls}">
-                        ${crownHtml}
-                        ${p.nom}<br><span class="player-pv ${pvCls}">${p.pv}</span>
-                    </div>`;
-            });
+            const pDiv = document.getElementById('players-display'); pDiv.innerHTML = "";
+            data.joueurs.forEach(p => { let cls = "player" + (p.nom === data.joueur_actuel ? " active" : ""); let cr = (p.sid === data.createur_sid) ? "<div class='crown'>👑</div>" : ""; pDiv.innerHTML += `<div class="${cls}">${cr}${p.nom}<br><span class="player-pv ${p.pv<0?'negative':''}">${p.pv}</span></div>`; });
 
-            // 2. Info Haut
             document.getElementById('status-message').innerText = data.message;
-            const kPanel = document.getElementById('killer-panel');
-            if (["ATTENTE_LANCER", "TOUR_ATTAQUE", "RESULTAT_ATTAQUE"].includes(data.etat)) {
-                kPanel.style.display = "block";
-                document.getElementById('killer-val').innerText = data.valeur_killer;
-                document.getElementById('target-name').innerText = data.nom_victime;
-            } else {
-                kPanel.style.display = "none";
-            }
+            const kp = document.getElementById('killer-panel');
+            if(["ATTENTE_LANCER", "TOUR_ATTAQUE", "RESULTAT_ATTAQUE", "ATTAQUE_RATEE", "FIN_ATTAQUE"].includes(data.etat)){ kp.style.display = 'block'; document.getElementById('killer-val').innerText = data.valeur_killer; document.getElementById('target-name').innerText = data.nom_victime; } else kp.style.display = 'none';
 
-            // 3. Dés Gardés
-            const keptArea = document.getElementById('kept-dice-area');
-            const keptLabel = document.getElementById('kept-label');
-            if (data.etat === "TOUR_ATTAQUE" || data.etat === "RESULTAT_ATTAQUE") {
-                keptLabel.innerText = `Dégâts accumulés : ${data.degats_accumules}`;
-            } else {
-                keptLabel.innerText = "Dés gardés";
-            }
-            let dClass = (data.etat === "TOUR_CHOIX") ? "dice-kept" : "dice-attack";
-            keptArea.innerHTML = data.des_gardes.map(d => `<div class='dice ${dClass}'>${d}</div>`).join('');
+            const ka = document.getElementById('kept-dice-area');
+            const kl = document.getElementById('kept-label');
+            if(data.etat.includes("ATTAQUE")) kl.innerText = `Dégâts: ${data.degats_accumules}`; else kl.innerText="Dés gardés";
+            let dc = (data.etat==="TOUR_CHOIX") ? "dice-kept" : "dice-attack";
+            ka.innerHTML = data.des_gardes.map(d=>`<div class='dice ${dc}'>${d}</div>`).join('');
 
-            // 4. Table
-            const tableDiv = document.getElementById('table-dice-area');
-            tableDiv.innerHTML = "";
-            if(data.des_table.length > 0) {
-                data.des_table.forEach((val, idx) => {
-                    let d = document.createElement('div');
-                    d.className = 'dice';
-                    d.innerText = val;
-                    if(isNewRoll) { d.classList.add('rolling'); d.style.animationDelay = (Math.random()*0.2)+'s'; }
-                    
-                    if(isMe && (data.etat === "TOUR_CHOIX" || data.etat === "TOUR_ATTAQUE")) {
-                        if(data.etat === "TOUR_ATTAQUE" && val !== data.valeur_killer) {
-                            d.style.opacity = "0.4"; d.style.cursor = "default"; 
-                        } else {
-                            d.onclick = () => toggle(idx, d);
-                            if (selectedIndices.includes(idx)) d.classList.add('selected');
-                        }
-                    } else {
-                        d.style.cursor = "default";
-                        if (data.etat === "RESULTAT_ATTAQUE") d.className += " dice-disabled";
-                    }
-                    tableDiv.appendChild(d);
+            const ta = document.getElementById('table-dice-area'); ta.innerHTML = "";
+            if(data.des_table.length>0) {
+                data.des_table.forEach((v,i) => {
+                    let d=document.createElement('div'); d.className='dice'; d.innerText=v;
+                    if(isNew){d.classList.add('rolling');d.style.animationDelay=(Math.random()*0.1)+'s';}
+                    if(isMe && (data.etat==="TOUR_CHOIX" || data.etat==="TOUR_ATTAQUE")) {
+                        if(data.etat==="TOUR_ATTAQUE" && v!==data.valeur_killer) {d.style.opacity="0.4";d.style.cursor="default";}
+                        else {d.onclick=()=>toggle(i,d); if(selectedIndices.includes(i))d.classList.add('selected');}
+                    } else {d.style.cursor="default"; if(data.etat==="RESULTAT_ATTAQUE")d.className+=" dice-disabled";}
+                    ta.appendChild(d);
                 });
-            } else if (data.etat === "RESULTAT_ATTAQUE") tableDiv.innerHTML = "<h3 style='color:white;'>Terminé !</h3>";
+            } else if (data.etat==="RESULTAT_ATTAQUE") ta.innerHTML="<h3 style='color:white'>Terminé !</h3>";
 
-            // 5. Boutons Actions
-            const actDiv = document.getElementById('actions-area');
-            actDiv.innerHTML = "";
-            
-            if (isMe) {
-                if (data.etat === "ATTENTE") {
-                    actDiv.innerHTML = `<button class="btn btn-action" onclick="actions.demarrer()">▶ Lancer la partie</button>`;
-                }
-                else if (data.etat === "TOUR_CHOIX" && data.des_table.length > 0) {
-                    actDiv.innerHTML = `<button class="btn btn-action" onclick="actions.garder()">✔ Valider mes dés</button>`;
-                }
-                else if (data.etat === "ATTENTE_LANCER") {
-                    actDiv.innerHTML = `<button class="btn btn-action btn-attack" onclick="actions.lancerAttaque()">⚔️ Lancer attaque sur ${data.nom_victime}</button>`;
-                }
-                else if (data.etat === "TOUR_ATTAQUE") {
-                    actDiv.innerHTML = `<button class="btn btn-action btn-attack" onclick="actions.garderAttaque()">💥 Valider Dégâts & Relancer</button>`;
-                }
-                else if (data.etat === "RESULTAT_ATTAQUE") {
-                    actDiv.innerHTML = `<button class="btn btn-action btn-next" onclick="actions.suivant()">➔ Victime Suivante / Fin</button>`;
-                }
+            // BOUTONS NORMAUX
+            const aa = document.getElementById('actions-area'); aa.innerHTML = "";
+            if(isMe) {
+                if(data.etat==="ATTENTE") aa.innerHTML=`<button class="btn" onclick="actions.demarrer()">▶ Lancer la partie</button>`;
+                else if(data.etat==="TOUR_CHOIX" && data.des_table.length>0) aa.innerHTML=`<button class="btn" onclick="actions.garder()">✔ Valider</button>`;
+                else if(data.etat==="RESULTAT_REGEN") aa.innerHTML=`<button class="btn btn-green" onclick="actions.finRegen()">Terminer</button>`;
+                
+                // BOUTON "VALIDER & RELANCER" (ORANGE)
+                else if(data.etat==="TOUR_ATTAQUE") aa.innerHTML=`<button class="btn btn-orange" onclick="if(!selectedIndices.length)alert('Choisis !');else socket.emit('action_garder_attaque',selectedIndices)">Valider & Relancer</button>`;
+                
+                // BOUTON "FRAPPER" (ROUGE) - FIN ATTAQUE
+                else if(data.etat==="FIN_ATTAQUE") aa.innerHTML=`<button class="btn btn-red" onclick="actions.terminerAttaque()">FRAPPER (${data.degats_accumules} Dégâts)</button>`;
+                
+                // BOUTON "ATTAQUE TERMINEE" (ROUGE) - ECHEC
+                else if(data.etat==="ATTAQUE_RATEE") aa.innerHTML=`<button class="btn btn-red" onclick="actions.terminerAttaque()">Attaque terminée (0)</button>`;
+                
+                else if(data.etat==="RESULTAT_ATTAQUE") aa.innerHTML=`<button class="btn" onclick="actions.suivant()">➔ Suivant</button>`;
             }
         });
 
-        // RECEPTION NOTIFICATIONS ET DECLENCHEMENT SONS
-        socket.on('notification', (data) => {
-            const logs = document.getElementById('logs');
-            logs.innerHTML = `<div>> ${data.msg}</div>` + logs.innerHTML;
-            
-            // Si le serveur a envoyé un signal de son spécifique
-            if (data.sound) {
-                playSound(data.sound);
-            }
-        });
-        socket.on('erreur', (msg) => alert(msg));
+        socket.on('notification', (d) => { document.getElementById('logs').innerHTML = `<div>> ${d.msg}</div>` + document.getElementById('logs').innerHTML; if(d.sound) playSound(d.sound); });
+        socket.on('erreur', (m) => alert(m));
     </script>
 </body>
 </html>
