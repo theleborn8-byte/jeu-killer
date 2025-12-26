@@ -14,6 +14,26 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: flex; flex-direction: column; align-items: center;
         }
         
+        /* BOUTON SON (Haut Gauche) */
+        #sound-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 3000;
+            display: flex; justify-content: center; align-items: center;
+            transition: all 0.2s;
+        }
+        #sound-btn:hover { background: rgba(0,0,0,0.8); transform: scale(1.1); }
+        .sound-off { opacity: 0.5; text-decoration: line-through; color: #e74c3c; }
+
         /* ZONES FIXES */
         #top-info-zone { width: 100%; height: 110px; display: flex; flex-direction: column; justify-content: center; align-items: center; margin-bottom: 10px; }
         #kept-dice-zone { width: 100%; height: 90px; display: flex; flex-direction: column; justify-content: center; align-items: center; border-top: 1px solid rgba(255,255,255,0.1); border-bottom: 1px solid rgba(255,255,255,0.1); }
@@ -118,7 +138,6 @@
         .player.active { border: 3px solid #f1c40f; transform: scale(1.05); box-shadow: 0 0 15px #f1c40f; z-index: 5;}
         .player-pv { font-weight: bold; font-size: 1.2em; }
         .negative { color: #ffadad; }
-        /* Couronne pour le créateur */
         .crown { position: absolute; top: -15px; right: -10px; font-size: 24px; transform: rotate(20deg); text-shadow: 0 2px 5px rgba(0,0,0,0.3); z-index: 20;}
 
         #logs { width: 100%; height: 120px; overflow-y: auto; background: #222; text-align: left; padding: 10px; font-family: monospace; color: #ddd; border-radius: 5px; box-sizing: border-box; }
@@ -127,6 +146,8 @@
 </head>
 <body>
     
+    <button id="sound-btn" onclick="toggleMute()">🔊</button>
+
     <div id="turn-alert">C'EST À TOI !</div>
 
     <div id="turn-overlay">
@@ -200,8 +221,39 @@
         let globalDiceValues = []; 
         let globalState = ""; 
         let globalBaseScore = 0; 
-        
         let lastCurrentPlayer = ""; 
+
+        // GESTION DU SON
+        let isMuted = false;
+        // Chemins vers le dossier static
+        const audioDice = new Audio('/static/dice.mp3');
+        const audioSword = new Audio('/static/sword.mp3');
+        const audioWin = new Audio('/static/win.mp3');
+        
+        function toggleMute() {
+            isMuted = !isMuted;
+            const btn = document.getElementById('sound-btn');
+            if (isMuted) {
+                btn.innerText = "🔇";
+                btn.classList.add('sound-off');
+            } else {
+                btn.innerText = "🔊";
+                btn.classList.remove('sound-off');
+            }
+        }
+
+        function playSound(type) {
+            if (isMuted) return;
+            let snd;
+            if (type === 'dice') snd = audioDice;
+            else if (type === 'sword') snd = audioSword;
+            else if (type === 'win') snd = audioWin;
+            
+            if (snd) {
+                snd.currentTime = 0; // Rembobiner si déjà en cours
+                snd.play().catch(e => console.log("Audio bloqué par navigateur:", e));
+            }
+        }
 
         socket.on('connect', () => { mySid = socket.id; });
         
@@ -228,9 +280,7 @@
             suivant: () => socket.emit('action_suivant')
         };
         
-        function validerTour() {
-            socket.emit('valider_debut_tour');
-        }
+        function validerTour() { socket.emit('valider_debut_tour'); }
 
         function toggle(idx, el) {
             if(selectedIndices.includes(idx)) {
@@ -249,10 +299,7 @@
             selectedIndices.forEach(i => { selectedSum += globalDiceValues[i]; });
             let total = globalBaseScore + selectedSum;
 
-            if (total === 0) {
-                bubble.style.display = 'none';
-                return;
-            }
+            if (total === 0) { bubble.style.display = 'none'; return; }
 
             if (globalState === "TOUR_ATTAQUE") {
                 bubble.innerText = "+" + total + " Dégâts";
@@ -266,7 +313,6 @@
             bubble.style.display = 'block';
         }
         
-        // FONCTION POUR AFFICHER L'ALERTE DE TOUR (FLASH)
         function triggerTurnAlert() {
             const alertBox = document.getElementById('turn-alert');
             alertBox.style.display = 'block';
@@ -282,12 +328,8 @@
             globalDiceValues = data.des_table;
             globalState = data.etat;
 
-            // GESTION BOUTON RESET (Seul le créateur le voit)
-            if (isCreator) {
-                document.getElementById('btn-reset-game').style.display = 'inline-block';
-            } else {
-                document.getElementById('btn-reset-game').style.display = 'none';
-            }
+            if (isCreator) document.getElementById('btn-reset-game').style.display = 'inline-block';
+            else document.getElementById('btn-reset-game').style.display = 'none';
 
             // GESTION POPUP CHANGEMENT TOUR
             if (data.etat === "TRANSITION_TOUR") {
@@ -305,47 +347,43 @@
                 document.getElementById('turn-overlay').style.display = 'none';
             }
 
-            // GESTION FLASH "C'EST A TOI" (En plus du popup pour être sûr)
             if (data.joueur_actuel !== lastCurrentPlayer) {
-                if (isMe && data.etat === "TRANSITION_TOUR") {
-                    triggerTurnAlert();
-                }
+                if (isMe && data.etat === "TRANSITION_TOUR") triggerTurnAlert();
                 lastCurrentPlayer = data.joueur_actuel;
             }
 
-            // VICTOIRE
+            // GESTION SON VICTOIRE
             if (data.etat === "FIN") {
                 document.getElementById('victory-overlay').style.display = "flex";
                 document.getElementById('winner-name').innerText = "Vainqueur : " + data.vainqueur;
+                playSound('win'); // SON VICTOIRE
                 return;
             } else {
                 document.getElementById('victory-overlay').style.display = "none";
             }
 
             // SCORE
-            if (data.etat === "TOUR_ATTAQUE") {
-                globalBaseScore = data.degats_accumules;
-            } else if (data.etat === "TOUR_CHOIX") {
-                globalBaseScore = data.des_gardes.reduce((a, b) => a + b, 0);
-            } else {
-                globalBaseScore = 0;
-            }
+            if (data.etat === "TOUR_ATTAQUE") globalBaseScore = data.degats_accumules;
+            else if (data.etat === "TOUR_CHOIX") globalBaseScore = data.des_gardes.reduce((a, b) => a + b, 0);
+            else globalBaseScore = 0;
 
             const currentDiceStr = JSON.stringify(data.des_table);
-            if (currentDiceStr !== lastDiceStr) {
-                 selectedIndices = [];
-                 lastDiceStr = currentDiceStr;
+            const isNewRoll = (currentDiceStr !== lastDiceStr && data.des_table.length > 0);
+            
+            if (isNewRoll) {
+                // SON DE DÉS SEULEMENT SI CE SONT DES NOUVEAUX DÉS
+                playSound('dice');
+                selectedIndices = [];
+                lastDiceStr = currentDiceStr;
             }
             updateSumDisplay();
 
-            // 1. Joueurs (AVEC COURONNE)
+            // 1. Joueurs
             const pDiv = document.getElementById('players-display');
             pDiv.innerHTML = "";
             data.joueurs.forEach(p => {
                 let cls = "player" + (p.nom === data.joueur_actuel ? " active" : "");
-                let pvCls = p.pv < 0 ? "negative" : ""; // < 0 car 0 est vivant maintenant
-                
-                // Vérifier si c'est le créateur
+                let pvCls = p.pv < 0 ? "negative" : ""; 
                 let crownHtml = (p.sid === data.createur_sid) ? "<div class='crown'>👑</div>" : "";
                 
                 pDiv.innerHTML += `
@@ -358,7 +396,6 @@
             // 2. Info Haut
             document.getElementById('status-message').innerText = data.message;
             const kPanel = document.getElementById('killer-panel');
-            
             if (["ATTENTE_LANCER", "TOUR_ATTAQUE", "RESULTAT_ATTAQUE"].includes(data.etat)) {
                 kPanel.style.display = "block";
                 document.getElementById('killer-val').innerText = data.valeur_killer;
@@ -370,27 +407,23 @@
             // 3. Dés Gardés
             const keptArea = document.getElementById('kept-dice-area');
             const keptLabel = document.getElementById('kept-label');
-            
             if (data.etat === "TOUR_ATTAQUE" || data.etat === "RESULTAT_ATTAQUE") {
                 keptLabel.innerText = `Dégâts accumulés : ${data.degats_accumules}`;
             } else {
                 keptLabel.innerText = "Dés gardés";
             }
-
             let dClass = (data.etat === "TOUR_CHOIX") ? "dice-kept" : "dice-attack";
             keptArea.innerHTML = data.des_gardes.map(d => `<div class='dice ${dClass}'>${d}</div>`).join('');
 
             // 4. Table
             const tableDiv = document.getElementById('table-dice-area');
-            const isNew = (data.des_table.length > 0 && selectedIndices.length === 0);
-            
             tableDiv.innerHTML = "";
             if(data.des_table.length > 0) {
                 data.des_table.forEach((val, idx) => {
                     let d = document.createElement('div');
                     d.className = 'dice';
                     d.innerText = val;
-                    if(isNew) { d.classList.add('rolling'); d.style.animationDelay = (Math.random()*0.2)+'s'; }
+                    if(isNewRoll) { d.classList.add('rolling'); d.style.animationDelay = (Math.random()*0.2)+'s'; }
                     
                     if(isMe && (data.etat === "TOUR_CHOIX" || data.etat === "TOUR_ATTAQUE")) {
                         if(data.etat === "TOUR_ATTAQUE" && val !== data.valeur_killer) {
@@ -401,15 +434,11 @@
                         }
                     } else {
                         d.style.cursor = "default";
-                        if (data.etat === "RESULTAT_ATTAQUE") {
-                            d.className += " dice-disabled";
-                        }
+                        if (data.etat === "RESULTAT_ATTAQUE") d.className += " dice-disabled";
                     }
                     tableDiv.appendChild(d);
                 });
-            } else if (data.etat === "RESULTAT_ATTAQUE") {
-                tableDiv.innerHTML = "<h3 style='color:white;'>Terminé !</h3>";
-            }
+            } else if (data.etat === "RESULTAT_ATTAQUE") tableDiv.innerHTML = "<h3 style='color:white;'>Terminé !</h3>";
 
             // 5. Boutons Actions
             const actDiv = document.getElementById('actions-area');
@@ -434,9 +463,15 @@
             }
         });
 
+        // NOTIFICATIONS & SON EPEE
         socket.on('notification', (data) => {
             const logs = document.getElementById('logs');
             logs.innerHTML = `<div>> ${data.msg}</div>` + logs.innerHTML;
+            
+            // Detection simple pour le son d'épée
+            if (data.msg.includes('KILLER') || data.msg.includes('dégâts') || data.msg.includes('BOOM')) {
+                playSound('sword');
+            }
         });
         socket.on('erreur', (msg) => alert(msg));
     </script>
