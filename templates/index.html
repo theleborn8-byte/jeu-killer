@@ -63,10 +63,10 @@
         }
         .sum-attack { color: #c0392b !important; border: 3px solid #c0392b; }
 
-        /* --- POPUP CHANGEMENT DE TOUR (DOUX) --- */
+        /* POPUP CHANGEMENT DE TOUR */
         #turn-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.2); /* Fond très léger, on voit au travers */
+            background: rgba(0,0,0,0.2); 
             display: none; justify-content: center; align-items: center; z-index: 2000;
         }
         .turn-card {
@@ -80,6 +80,19 @@
         .turn-title { font-size: 1.5em; color: #7f8c8d; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
         .turn-player-name { font-size: 2.5em; font-weight: bold; color: #2c3e50; margin-bottom: 20px; }
         @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* ALERTE TOUR FLASH */
+        #turn-alert {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(46, 204, 113, 0.95);
+            color: white; padding: 30px 60px; border-radius: 20px;
+            font-size: 3em; font-weight: bold; text-transform: uppercase;
+            box-shadow: 0 0 50px rgba(46, 204, 113, 0.8);
+            z-index: 2000; pointer-events: none; display: none;
+            animation: popTurn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-shadow: 2px 2px 0px #27ae60;
+        }
+        @keyframes popTurn { from { transform: translate(-50%, -50%) scale(0); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
 
         /* OVERLAY VICTOIRE */
         #victory-overlay {
@@ -105,7 +118,8 @@
         .player.active { border: 3px solid #f1c40f; transform: scale(1.05); box-shadow: 0 0 15px #f1c40f; z-index: 5;}
         .player-pv { font-weight: bold; font-size: 1.2em; }
         .negative { color: #ffadad; }
-        .crown { position: absolute; top: -15px; right: -10px; font-size: 24px; transform: rotate(20deg); text-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        /* Couronne pour le créateur */
+        .crown { position: absolute; top: -15px; right: -10px; font-size: 24px; transform: rotate(20deg); text-shadow: 0 2px 5px rgba(0,0,0,0.3); z-index: 20;}
 
         #logs { width: 100%; height: 120px; overflow-y: auto; background: #222; text-align: left; padding: 10px; font-family: monospace; color: #ddd; border-radius: 5px; box-sizing: border-box; }
 
@@ -113,6 +127,8 @@
 </head>
 <body>
     
+    <div id="turn-alert">C'EST À TOI !</div>
+
     <div id="turn-overlay">
         <div class="turn-card">
             <div class="turn-title">C'est au tour de</div>
@@ -170,6 +186,7 @@
             </div>
 
             <div id="logs"></div>
+            
             <button id="btn-reset-game" class="btn" style="background:#7f8c8d; font-size:14px; margin-top:20px; display:none;" onclick="quit()">Arrêter la partie</button>
         </div>
     </div>
@@ -184,6 +201,8 @@
         let globalState = ""; 
         let globalBaseScore = 0; 
         
+        let lastCurrentPlayer = ""; 
+
         socket.on('connect', () => { mySid = socket.id; });
         
         function rejoindre() {
@@ -247,6 +266,13 @@
             bubble.style.display = 'block';
         }
         
+        // FONCTION POUR AFFICHER L'ALERTE DE TOUR (FLASH)
+        function triggerTurnAlert() {
+            const alertBox = document.getElementById('turn-alert');
+            alertBox.style.display = 'block';
+            setTimeout(() => { alertBox.style.display = 'none'; }, 1500);
+        }
+
         function quit() { if(confirm("Attention : Cela va arrêter la partie pour TOUT LE MONDE. Continuer ?")) socket.emit('reset_partie'); }
         socket.on('force_reset', () => location.reload());
 
@@ -279,6 +305,14 @@
                 document.getElementById('turn-overlay').style.display = 'none';
             }
 
+            // GESTION FLASH "C'EST A TOI" (En plus du popup pour être sûr)
+            if (data.joueur_actuel !== lastCurrentPlayer) {
+                if (isMe && data.etat === "TRANSITION_TOUR") {
+                    triggerTurnAlert();
+                }
+                lastCurrentPlayer = data.joueur_actuel;
+            }
+
             // VICTOIRE
             if (data.etat === "FIN") {
                 document.getElementById('victory-overlay').style.display = "flex";
@@ -309,7 +343,7 @@
             pDiv.innerHTML = "";
             data.joueurs.forEach(p => {
                 let cls = "player" + (p.nom === data.joueur_actuel ? " active" : "");
-                let pvCls = p.pv < 0 ? "negative" : "";
+                let pvCls = p.pv < 0 ? "negative" : ""; // < 0 car 0 est vivant maintenant
                 
                 // Vérifier si c'est le créateur
                 let crownHtml = (p.sid === data.createur_sid) ? "<div class='crown'>👑</div>" : "";

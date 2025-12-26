@@ -30,7 +30,7 @@ class Partie:
         self.des_gardes = [] 
         self.message = "En attente de joueurs..."
         self.vainqueur = None
-        self.createur_sid = None # L'ID du chef de la partie
+        self.createur_sid = None 
         
         # Variables Killer
         self.valeur_killer = 0
@@ -43,18 +43,23 @@ class Partie:
         return self.joueurs[self.joueur_actuel_idx]
 
     def verifier_victoire(self):
-        positifs = [j for j in self.joueurs if j.pv > 0]
+        # MODIFICATION ICI : On survit tant qu'on est >= 0.
+        # On n'est "éliminé" (pour le calcul de fin) que si on est < 0.
+        survivants = [j for j in self.joueurs if j.pv >= 0]
+        
         if len(self.joueurs) > 1:
-            if len(positifs) == 1:
-                self.vainqueur = positifs[0].nom
+            if len(survivants) == 1:
+                # Un seul joueur n'est pas négatif -> C'est le vainqueur
+                self.vainqueur = survivants[0].nom
                 self.etat = "FIN"
-                self.message = f"🏆 VICTOIRE ! {self.vainqueur} a gagné !"
+                self.message = f"🏆 VICTOIRE ! {self.vainqueur} est le dernier survivant !"
                 self.broadcast_etat()
                 return True
-            elif len(positifs) == 0:
+            elif len(survivants) == 0:
+                # Tout le monde est négatif
                 self.vainqueur = "Personne"
                 self.etat = "FIN"
-                self.message = "Tout le monde est K.O... Match nul ?"
+                self.message = "Tout le monde est dans le négatif... Match nul ?"
                 self.broadcast_etat()
                 return True
         return False
@@ -63,12 +68,9 @@ class Partie:
         if self.verifier_victoire(): return
         self.joueur_actuel_idx = (self.joueur_actuel_idx + 1) % len(self.joueurs)
         
-        # On vide tout
         self.des_gardes = []
         self.des_sur_table = []
         
-        # NOUVEAU : On ne lance pas les dés tout de suite.
-        # On passe en mode "TRANSITION" pour afficher le popup à tout le monde.
         self.etat = "TRANSITION_TOUR"
         self.broadcast_etat(f"Au tour de {self.get_joueur_actuel().nom} de jouer.")
 
@@ -94,7 +96,7 @@ class Partie:
             'nom_victime': nom_victime,
             'degats_accumules': self.degats_accumules,
             'vainqueur': self.vainqueur,
-            'createur_sid': self.createur_sid # On envoie l'ID du chef au front
+            'createur_sid': self.createur_sid
         }
         socketio.emit('update_jeu', data)
 
@@ -142,14 +144,12 @@ def handle_disconnect():
     if joueur_parti:
         jeu.joueurs.remove(joueur_parti)
         
-        # GESTION DU CREATEUR QUI PART
         if jeu.createur_sid == request.sid:
             if len(jeu.joueurs) > 0:
-                jeu.createur_sid = jeu.joueurs[0].sid # Le suivant devient chef
-                print(f"Nouveau chef : {jeu.joueurs[0].nom}")
+                jeu.createur_sid = jeu.joueurs[0].sid
             else:
                 jeu.createur_sid = None
-                jeu.reset() # Plus personne, reset
+                jeu.reset()
                 return
 
         jeu.broadcast_etat(f"{joueur_parti.nom} a quitté la partie.")
@@ -163,7 +163,6 @@ def handle_rejoindre(nom):
     nouveau = Joueur(request.sid, nom)
     jeu.joueurs.append(nouveau)
     
-    # Le premier arrivé est le créateur
     if jeu.createur_sid is None:
         jeu.createur_sid = nouveau.sid
         
@@ -171,7 +170,6 @@ def handle_rejoindre(nom):
 
 @socketio.on('demarrer_partie')
 def handle_demarrer():
-    # Seul le créateur peut lancer (ou n'importe qui si pas implémenté strict, mais ici on check le front)
     if len(jeu.joueurs) < 2: return
     jeu.etat = "INIT_PV"
     min_pv = 1000
@@ -190,18 +188,15 @@ def handle_demarrer():
     jeu.joueurs = jeu.joueurs[starter_idx:] + jeu.joueurs[:starter_idx]
     socketio.emit('notification', {'msg': "PV Initiaux : " + ", ".join(log)})
     
-    # Premier Tour : On passe par l'état de transition pour que le 1er joueur valide aussi
     jeu.joueur_actuel_idx = 0
     jeu.etat = "TRANSITION_TOUR"
     jeu.broadcast_etat(f"La partie commence ! Au tour de {jeu.joueurs[0].nom}.")
 
-# --- NOUVEAU : VALIDATION DEBUT DE TOUR ---
 @socketio.on('valider_debut_tour')
 def handle_valider_debut_tour():
     joueur = jeu.get_joueur_actuel()
     if request.sid != joueur.sid or jeu.etat != "TRANSITION_TOUR": return
     
-    # C'est bon, le joueur est prêt, on lance vraiment
     jeu.etat = "TOUR_CHOIX"
     jeu.lancer_des(5)
     jeu.broadcast_etat("C'est parti !")
@@ -318,7 +313,6 @@ def handle_suivant():
 
 @socketio.on('reset_partie')
 def handle_reset():
-    # Sécurité : Seul le créateur peut reset
     if jeu.createur_sid != request.sid:
         emit('erreur', "Seul le créateur de la partie peut arrêter le jeu !")
         return
