@@ -6,92 +6,23 @@
     <title>Le Killer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
-        /* --- STYLE GENERAL --- */
-        body { 
-            font-family: 'Segoe UI', sans-serif; 
-            background: #2c3e50; 
-            color: white; 
-            text-align: center; 
-            margin: 0; padding: 20px;
-            overflow-y: scroll; /* Force la barre de défilement pour éviter le saut latéral */
-        }
+        /* STYLE GENERAL */
+        body { font-family: 'Segoe UI', sans-serif; background: #2c3e50; color: white; text-align: center; margin: 0; padding: 20px; overflow-y: scroll; }
         .container { max-width: 900px; margin: 0 auto; }
-        
-        /* La carte principale a maintenant une taille minime pour éviter le rétrécissement */
         .card { 
-            background: #34495e; 
-            padding: 20px; 
-            border-radius: 15px; 
-            margin-bottom: 20px; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            background: #34495e; padding: 20px; border-radius: 15px; margin-bottom: 20px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: flex; flex-direction: column; align-items: center;
         }
-
-        /* --- ZONES FIXES (ANTI-SHAKE) --- */
         
-        /* 1. Zone du Haut (Status + Info Killer) */
-        #top-info-zone {
-            width: 100%;
-            height: 110px; /* HAUTEUR FIXE : Empêche le saut quand le killer apparait */
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            margin-bottom: 10px;
-        }
+        /* ZONES FIXES */
+        #top-info-zone { width: 100%; height: 110px; display: flex; flex-direction: column; justify-content: center; align-items: center; margin-bottom: 10px; }
+        #kept-dice-zone { width: 100%; height: 90px; display: flex; flex-direction: column; justify-content: center; align-items: center; border-top: 1px solid rgba(255,255,255,0.1); border-bottom: 1px solid rgba(255,255,255,0.1); }
+        #table-container { height: 340px; width: 100%; display: flex; justify-content: center; align-items: center; position: relative; margin-top: 20px; }
+        #actions-area { width: 100%; height: 80px; display: flex; justify-content: center; align-items: center; margin-top: 20px; }
 
-        /* 2. Zone des Dés Gardés */
-        #kept-dice-zone {
-            width: 100%;
-            height: 90px; /* HAUTEUR FIXE : Réserve la place pour une ligne de dés */
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            border-top: 1px solid rgba(255,255,255,0.1);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-
-        /* 3. Zone de la Table */
-        #table-container { 
-            height: 340px; /* HAUTEUR FIXE pour la zone du tapis */
-            width: 100%;
-            display: flex; 
-            justify-content: center; 
-            align-items: center;
-            position: relative; 
-            margin-top: 20px;
-        }
-
-        /* 4. Zone des Boutons */
-        #actions-area {
-            width: 100%;
-            height: 80px; /* HAUTEUR FIXE : Réserve la place pour un gros bouton */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-top: 20px;
-        }
-
-        /* --- ELEMENTS VISUELS --- */
-
-        .info-panel { 
-            font-size: 1.3em; 
-            color: #f39c12; 
-            font-weight: bold;
-            margin: 5px 0;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-        }
-
-        #killer-panel {
-            border: 2px solid #c0392b; 
-            padding: 5px 15px; 
-            border-radius: 10px; 
-            background: rgba(192, 57, 43, 0.15);
-            animation: fadeIn 0.3s ease;
-        }
+        /* ELEMENTS VISUELS */
+        .info-panel { font-size: 1.3em; color: #f39c12; font-weight: bold; margin: 5px 0; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
+        #killer-panel { border: 2px solid #c0392b; padding: 5px 15px; border-radius: 10px; background: rgba(192, 57, 43, 0.15); animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity:0; transform: translateY(-10px); } to { opacity:1; transform: translateY(0); } }
 
         /* DÉS */
@@ -100,19 +31,11 @@
             width: 60px; height: 60px; background: white; color: black; 
             font-size: 35px; font-weight: bold; margin: 0 8px; border-radius: 12px; 
             cursor: pointer; border: 4px solid #bdc3c7; user-select: none;
-            position: relative; z-index: 10;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            transition: transform 0.1s;
+            position: relative; z-index: 10; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: transform 0.1s;
         }
         .dice:active { transform: scale(0.95); }
-        
         .rolling { animation: rollDice 0.6s ease-out; }
-        @keyframes rollDice {
-            0% { transform: scale(0) rotate(0deg); opacity: 0; }
-            50% { transform: scale(1.2) rotate(360deg); }
-            100% { transform: scale(1) rotate(720deg); opacity: 1; }
-        }
-        
+        @keyframes rollDice { 0% { transform: scale(0) rotate(0deg); opacity: 0; } 50% { transform: scale(1.2) rotate(360deg); } 100% { transform: scale(1) rotate(720deg); opacity: 1; } }
         .dice.selected { border-color: #e67e22; background: #ecf0f1; transform: scale(1.1); box-shadow: 0 0 15px #e67e22; z-index: 11; }
         .dice-kept { background: #27ae60; color: white; border-color: #2ecc71; cursor: default; }
         .dice-attack { background: #c0392b; color: white; border-color: #e74c3c; cursor: default; }
@@ -123,8 +46,7 @@
             width: 320px; height: 320px; background: #218c53; 
             border: 12px solid #574b90; border-radius: 50%;
             display: flex; flex-wrap: wrap; justify-content: center; align-content: center;
-            position: relative;
-            box-shadow: inset 0 0 40px rgba(0,0,0,0.5), 0 10px 25px rgba(0,0,0,0.4);
+            position: relative; box-shadow: inset 0 0 40px rgba(0,0,0,0.5), 0 10px 25px rgba(0,0,0,0.4);
         }
         #table-dice-area::before {
             content: ""; position: absolute; top:0; left:0; right:0; bottom:0;
@@ -135,49 +57,71 @@
 
         /* SCORE BUBBLE */
         #selection-sum {
-            position: absolute; top: 10px; right: 10px; 
-            background: white; color: black;
+            position: absolute; top: 10px; right: 10px; background: white; color: black;
             padding: 8px 18px; border-radius: 20px; font-weight: bold; font-size: 1.4em;
             box-shadow: 0 4px 6px rgba(0,0,0,0.5); display: none; z-index: 20; transition: all 0.2s;
         }
         .sum-attack { color: #c0392b !important; border: 3px solid #c0392b; }
 
-        /* VICTOIRE POPUP */
+        /* --- POPUP CHANGEMENT DE TOUR (DOUX) --- */
+        #turn-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.2); /* Fond très léger, on voit au travers */
+            display: none; justify-content: center; align-items: center; z-index: 2000;
+        }
+        .turn-card {
+            background: white; color: #333;
+            padding: 30px 50px; border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            animation: slideUp 0.3s ease-out;
+            min-width: 300px;
+        }
+        .turn-title { font-size: 1.5em; color: #7f8c8d; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+        .turn-player-name { font-size: 2.5em; font-weight: bold; color: #2c3e50; margin-bottom: 20px; }
+        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* OVERLAY VICTOIRE */
         #victory-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); display: none; 
-            justify-content: center; align-items: center; z-index: 1000;
+            background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 1000;
         }
-        .victory-card {
-            background: white; padding: 40px; border-radius: 20px; text-align: center;
-            box-shadow: 0 0 50px rgba(255, 215, 0, 0.8); animation: zoomIn 0.5s ease-out;
-        }
+        .victory-card { background: white; padding: 40px; border-radius: 20px; text-align: center; box-shadow: 0 0 50px rgba(255, 215, 0, 0.8); animation: zoomIn 0.5s ease-out; }
         .victory-title { color: #d4af37; font-size: 3em; margin: 0; text-transform: uppercase; text-shadow: 2px 2px 0px #000; }
         .victory-name { color: #333; font-size: 2em; margin-top: 20px; font-weight: bold; }
         @keyframes zoomIn { from { transform: scale(0); } to { transform: scale(1); } }
 
-        /* BOUTONS */
+        /* BUTTONS & PLAYERS */
         .btn { padding: 12px 24px; font-size: 18px; cursor: pointer; background: #e67e22; border: none; color: white; border-radius: 8px; font-weight: bold; transition: background 0.2s; }
         .btn:hover { background: #d35400; }
-        .btn:active { transform: translateY(2px); }
+        .btn-green { background: #27ae60; width: 100%; font-size: 1.2em; padding: 15px;}
+        .btn-green:hover { background: #219150; }
         .btn-action { width: 100%; max-width: 350px; padding: 15px; font-size: 20px; }
         .btn-attack { background: #c0392b; } .btn-attack:hover { background: #a93226; }
         .btn-next { background: #8e44ad; } .btn-next:hover { background: #71368a; }
-
-        /* JOUEURS */
+        
         .player-list { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; width: 100%; min-height: 80px; align-items: center; }
-        .player { background: #16a085; padding: 10px; margin: 5px; border-radius: 5px; min-width: 100px; display:inline-block; transition: all 0.3s; }
+        .player { background: #16a085; padding: 10px; margin: 5px; border-radius: 5px; min-width: 100px; display:inline-block; transition: all 0.3s; position: relative; }
         .player.active { border: 3px solid #f1c40f; transform: scale(1.05); box-shadow: 0 0 15px #f1c40f; z-index: 5;}
         .player-pv { font-weight: bold; font-size: 1.2em; }
         .negative { color: #ffadad; }
-        
-        /* LOGS */
+        .crown { position: absolute; top: -15px; right: -10px; font-size: 24px; transform: rotate(20deg); text-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+
         #logs { width: 100%; height: 120px; overflow-y: auto; background: #222; text-align: left; padding: 10px; font-family: monospace; color: #ddd; border-radius: 5px; box-sizing: border-box; }
 
     </style>
 </head>
 <body>
     
+    <div id="turn-overlay">
+        <div class="turn-card">
+            <div class="turn-title">C'est au tour de</div>
+            <div id="turn-player-name" class="turn-player-name">...</div>
+            <button id="btn-start-turn" class="btn btn-green" onclick="validerTour()">C'est parti !</button>
+            <div id="wait-msg" style="display:none; color:#7f8c8d; font-style:italic;">En attente du joueur...</div>
+        </div>
+    </div>
+
     <div id="victory-overlay">
         <div class="victory-card">
             <h1 class="victory-title">👑 Victoire 👑</h1>
@@ -205,7 +149,6 @@
                 
                 <div id="top-info-zone">
                     <div id="status-message" class="info-panel">En attente...</div>
-                    
                     <div id="killer-panel" style="display:none;">
                         <h3 style="margin:0; color:#c0392b;">MODE KILLER (<span id="killer-val"></span>)</h3>
                         <div style="font-size: 0.9em; color: #ddd;">Cible : <strong id="target-name" style="color:white;"></strong></div>
@@ -227,7 +170,7 @@
             </div>
 
             <div id="logs"></div>
-            <button class="btn" style="background:#7f8c8d; font-size:14px; margin-top:20px;" onclick="quit()">Arrêter la partie</button>
+            <button id="btn-reset-game" class="btn" style="background:#7f8c8d; font-size:14px; margin-top:20px; display:none;" onclick="quit()">Arrêter la partie</button>
         </div>
     </div>
 
@@ -240,7 +183,7 @@
         let globalDiceValues = []; 
         let globalState = ""; 
         let globalBaseScore = 0; 
-
+        
         socket.on('connect', () => { mySid = socket.id; });
         
         function rejoindre() {
@@ -265,6 +208,10 @@
             },
             suivant: () => socket.emit('action_suivant')
         };
+        
+        function validerTour() {
+            socket.emit('valider_debut_tour');
+        }
 
         function toggle(idx, el) {
             if(selectedIndices.includes(idx)) {
@@ -300,13 +247,37 @@
             bubble.style.display = 'block';
         }
         
-        function quit() { if(confirm("Retour au menu ?")) socket.emit('reset_partie'); }
+        function quit() { if(confirm("Attention : Cela va arrêter la partie pour TOUT LE MONDE. Continuer ?")) socket.emit('reset_partie'); }
         socket.on('force_reset', () => location.reload());
 
         socket.on('update_jeu', (data) => {
             const isMe = (data.joueur_actuel_sid === mySid);
+            const isCreator = (data.createur_sid === mySid);
             globalDiceValues = data.des_table;
             globalState = data.etat;
+
+            // GESTION BOUTON RESET (Seul le créateur le voit)
+            if (isCreator) {
+                document.getElementById('btn-reset-game').style.display = 'inline-block';
+            } else {
+                document.getElementById('btn-reset-game').style.display = 'none';
+            }
+
+            // GESTION POPUP CHANGEMENT TOUR
+            if (data.etat === "TRANSITION_TOUR") {
+                document.getElementById('turn-overlay').style.display = 'flex';
+                document.getElementById('turn-player-name').innerText = data.joueur_actuel;
+                
+                if (isMe) {
+                    document.getElementById('btn-start-turn').style.display = 'inline-block';
+                    document.getElementById('wait-msg').style.display = 'none';
+                } else {
+                    document.getElementById('btn-start-turn').style.display = 'none';
+                    document.getElementById('wait-msg').style.display = 'block';
+                }
+            } else {
+                document.getElementById('turn-overlay').style.display = 'none';
+            }
 
             // VICTOIRE
             if (data.etat === "FIN") {
@@ -333,13 +304,21 @@
             }
             updateSumDisplay();
 
-            // 1. Joueurs
+            // 1. Joueurs (AVEC COURONNE)
             const pDiv = document.getElementById('players-display');
             pDiv.innerHTML = "";
             data.joueurs.forEach(p => {
                 let cls = "player" + (p.nom === data.joueur_actuel ? " active" : "");
                 let pvCls = p.pv < 0 ? "negative" : "";
-                pDiv.innerHTML += `<div class="${cls}">${p.nom}<br><span class="player-pv ${pvCls}">${p.pv}</span></div>`;
+                
+                // Vérifier si c'est le créateur
+                let crownHtml = (p.sid === data.createur_sid) ? "<div class='crown'>👑</div>" : "";
+                
+                pDiv.innerHTML += `
+                    <div class="${cls}">
+                        ${crownHtml}
+                        ${p.nom}<br><span class="player-pv ${pvCls}">${p.pv}</span>
+                    </div>`;
             });
 
             // 2. Info Haut

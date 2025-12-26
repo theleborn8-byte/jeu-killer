@@ -23,13 +23,14 @@ class Partie:
 
     def reset(self):
         self.joueurs = []
-        # ETATS : ATTENTE, INIT_PV, TOUR_CHOIX, ATTENTE_LANCER, TOUR_ATTAQUE, RESULTAT_ATTAQUE, FIN
+        # ETATS : ATTENTE, INIT_PV, TRANSITION_TOUR, TOUR_CHOIX, ATTENTE_LANCER, TOUR_ATTAQUE, RESULTAT_ATTAQUE, FIN
         self.etat = "ATTENTE" 
         self.joueur_actuel_idx = 0
         self.des_sur_table = []
         self.des_gardes = [] 
         self.message = "En attente de joueurs..."
         self.vainqueur = None
+        self.createur_sid = None # L'ID du chef de la partie
         
         # Variables Killer
         self.valeur_killer = 0
@@ -62,12 +63,14 @@ class Partie:
         if self.verifier_victoire(): return
         self.joueur_actuel_idx = (self.joueur_actuel_idx + 1) % len(self.joueurs)
         
+        # On vide tout
         self.des_gardes = []
         self.des_sur_table = []
-        self.etat = "TOUR_CHOIX"
         
-        self.lancer_des(5)
-        self.broadcast_etat(f"C'est au tour de {self.get_joueur_actuel().nom}")
+        # NOUVEAU : On ne lance pas les dés tout de suite.
+        # On passe en mode "TRANSITION" pour afficher le popup à tout le monde.
+        self.etat = "TRANSITION_TOUR"
+        self.broadcast_etat(f"Au tour de {self.get_joueur_actuel().nom} de jouer.")
 
     def lancer_des(self, nombre):
         self.des_sur_table = [random.randint(1, 6) for _ in range(nombre)]
@@ -90,7 +93,8 @@ class Partie:
             'valeur_killer': self.valeur_killer,
             'nom_victime': nom_victime,
             'degats_accumules': self.degats_accumules,
-            'vainqueur': self.vainqueur # On envoie le vainqueur au front
+            'vainqueur': self.vainqueur,
+            'createur_sid': self.createur_sid # On envoie l'ID du chef au front
         }
         socketio.emit('update_jeu', data)
 
@@ -129,7 +133,6 @@ def index(): return render_template('index.html')
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    # Retirer le joueur qui part
     joueur_parti = None
     for j in jeu.joueurs:
         if j.sid == request.sid:
@@ -138,28 +141,37 @@ def handle_disconnect():
     
     if joueur_parti:
         jeu.joueurs.remove(joueur_parti)
-        print(f"Joueur {joueur_parti.nom} déconnecté.")
         
-        # SI PLUS DE JOUEURS -> RESET COMPLET
-        if len(jeu.joueurs) == 0:
-            print("Plus de joueurs. Reset de la partie.")
-            jeu.reset()
-        else:
-            # Si la partie était en cours, ça peut casser la logique de tour,
-            # donc on fait un broadcast pour mettre à jour la liste.
-            # Idéalement il faudrait gérer le tour du joueur parti, mais pour l'instant on update juste.
-            jeu.broadcast_etat(f"{joueur_parti.nom} a quitté la partie.")
+        # GESTION DU CREATEUR QUI PART
+        if jeu.createur_sid == request.sid:
+            if len(jeu.joueurs) > 0:
+                jeu.createur_sid = jeu.joueurs[0].sid # Le suivant devient chef
+                print(f"Nouveau chef : {jeu.joueurs[0].nom}")
+            else:
+                jeu.createur_sid = None
+                jeu.reset() # Plus personne, reset
+                return
+
+        jeu.broadcast_etat(f"{joueur_parti.nom} a quitté la partie.")
 
 @socketio.on('rejoindre')
 def handle_rejoindre(nom):
     if jeu.etat != "ATTENTE": return
     for j in jeu.joueurs:
         if j.sid == request.sid: return
-    jeu.joueurs.append(Joueur(request.sid, nom))
+    
+    nouveau = Joueur(request.sid, nom)
+    jeu.joueurs.append(nouveau)
+    
+    # Le premier arrivé est le créateur
+    if jeu.createur_sid is None:
+        jeu.createur_sid = nouveau.sid
+        
     jeu.broadcast_etat(f"{nom} a rejoint.")
 
 @socketio.on('demarrer_partie')
 def handle_demarrer():
+    # Seul le créateur peut lancer (ou n'importe qui si pas implémenté strict, mais ici on check le front)
     if len(jeu.joueurs) < 2: return
     jeu.etat = "INIT_PV"
     min_pv = 1000
@@ -178,10 +190,21 @@ def handle_demarrer():
     jeu.joueurs = jeu.joueurs[starter_idx:] + jeu.joueurs[:starter_idx]
     socketio.emit('notification', {'msg': "PV Initiaux : " + ", ".join(log)})
     
+    # Premier Tour : On passe par l'état de transition pour que le 1er joueur valide aussi
     jeu.joueur_actuel_idx = 0
+    jeu.etat = "TRANSITION_TOUR"
+    jeu.broadcast_etat(f"La partie commence ! Au tour de {jeu.joueurs[0].nom}.")
+
+# --- NOUVEAU : VALIDATION DEBUT DE TOUR ---
+@socketio.on('valider_debut_tour')
+def handle_valider_debut_tour():
+    joueur = jeu.get_joueur_actuel()
+    if request.sid != joueur.sid or jeu.etat != "TRANSITION_TOUR": return
+    
+    # C'est bon, le joueur est prêt, on lance vraiment
     jeu.etat = "TOUR_CHOIX"
     jeu.lancer_des(5)
-    jeu.broadcast_etat(f"Début ! {jeu.joueurs[0].nom} commence.")
+    jeu.broadcast_etat("C'est parti !")
 
 @socketio.on('action_garder')
 def handle_garder(indices):
@@ -295,6 +318,11 @@ def handle_suivant():
 
 @socketio.on('reset_partie')
 def handle_reset():
+    # Sécurité : Seul le créateur peut reset
+    if jeu.createur_sid != request.sid:
+        emit('erreur', "Seul le créateur de la partie peut arrêter le jeu !")
+        return
+    
     jeu.reset()
     socketio.emit('force_reset')
 
