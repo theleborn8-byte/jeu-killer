@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Le Killer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        /* STYLE GENERAL */
+        body { font-family: 'Segoe UI', sans-serif; background: #2c3e50; color: white; text-align: center; margin: 0; padding: 20px;}
+        .container { max-width: 900px; margin: 0 auto; }
+        .card { background: #34495e; padding: 20px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        
+        /* DÉS */
+        .dice { 
+            display: flex; justify-content: center; align-items: center;
+            width: 60px; height: 60px; background: white; color: black; 
+            font-size: 35px; font-weight: bold; margin: 10px; border-radius: 12px; 
+            cursor: pointer; border: 4px solid #bdc3c7; user-select: none;
+            position: relative; z-index: 10;
+        }
+        .rolling { animation: rollDice 0.6s ease-out; }
+        @keyframes rollDice {
+            0% { transform: scale(0) rotate(0deg); opacity: 0; }
+            50% { transform: scale(1.2) rotate(360deg); }
+            100% { transform: scale(1) rotate(720deg); opacity: 1; }
+        }
+        
+        .dice.selected { border-color: #e67e22; background: #ecf0f1; transform: scale(1.1); box-shadow: 0 0 15px #e67e22; }
+        .dice-kept { background: #27ae60; color: white; border-color: #2ecc71; cursor: default; }
+        .dice-attack { background: #c0392b; color: white; border-color: #e74c3c; cursor: default; }
+        .dice-disabled { opacity: 0.5; filter: grayscale(100%); cursor: default; }
+
+        /* TABLE */
+        #table-container { 
+            display: flex; justify-content: center; margin-top: 20px; 
+            position: relative; 
+        }
+        #table-dice-area {
+            width: 320px; height: 320px; background: #218c53; 
+            border: 12px solid #574b90; border-radius: 50%;
+            display: flex; flex-wrap: wrap; justify-content: center; align-content: center;
+            position: relative;
+        }
+        #table-dice-area::before {
+            content: ""; position: absolute; top:0; left:0; right:0; bottom:0;
+            border-radius: 50%; opacity: 0.15; pointer-events: none; z-index: 0;
+            background-image: repeating-linear-gradient(45deg, #000 0, #000 1px, transparent 0, transparent 50%);
+            background-size: 10px 10px;
+        }
+
+        /* BULLE DE SCORE */
+        #selection-sum {
+            position: absolute; top: -20px; right: 10%; background: white; color: black;
+            padding: 8px 18px; border-radius: 20px; font-weight: bold; font-size: 1.4em;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5); display: none; z-index: 20; transition: all 0.2s;
+        }
+        .sum-attack { color: #c0392b !important; border: 3px solid #c0392b; }
+        
+        /* POPUP VICTOIRE */
+        #victory-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none; /* Caché par défaut */
+            justify-content: center; align-items: center;
+            z-index: 1000;
+        }
+        .victory-card {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 0 50px rgba(255, 215, 0, 0.8);
+            animation: zoomIn 0.5s ease-out;
+        }
+        .victory-title {
+            color: #d4af37; /* OR */
+            font-size: 3em;
+            margin: 0;
+            text-transform: uppercase;
+            text-shadow: 2px 2px 0px #000;
+        }
+        .victory-name {
+            color: #333;
+            font-size: 2em;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        @keyframes zoomIn { from { transform: scale(0); } to { transform: scale(1); } }
+
+        /* BOUTONS ET TEXTES */
+        .btn { padding: 12px 24px; font-size: 18px; cursor: pointer; background: #e67e22; border: none; color: white; border-radius: 8px; font-weight: bold; margin-top:10px; }
+        .btn:hover { background: #d35400; }
+        .btn-action { width: 100%; max-width: 350px; padding: 15px; font-size: 20px; }
+        .btn-attack { background: #c0392b; } .btn-attack:hover { background: #a93226; }
+        .btn-next { background: #8e44ad; } .btn-next:hover { background: #71368a; }
+
+        .player { background: #16a085; padding: 10px; margin: 5px; border-radius: 5px; min-width: 100px; display:inline-block; }
+        .player.active { border: 3px solid #f1c40f; transform: scale(1.05); box-shadow: 0 0 10px #f1c40f;}
+        .player-pv { font-weight: bold; font-size: 1.2em; }
+        .negative { color: #ffadad; }
+
+        #logs { height: 120px; overflow-y: auto; background: #222; text-align: left; padding: 10px; font-family: monospace; color: #ddd; border-radius: 5px; }
+        .info-panel { font-size: 1.2em; margin-bottom: 10px; color: #f39c12; min-height: 1.5em;}
+    </style>
+</head>
+<body>
+    
+    <div id="victory-overlay">
+        <div class="victory-card">
+            <h1 class="victory-title">👑 Victoire 👑</h1>
+            <div id="winner-name" class="victory-name">Joueur 1</div>
+            <br>
+            <button class="btn" onclick="quit()">Retour au menu</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>🎲 LE KILLER 🎲</h1>
+
+        <div id="login-screen" class="card">
+            <h2>Bienvenue</h2>
+            <input type="text" id="username" placeholder="Pseudo" style="padding:10px;">
+            <button class="btn" onclick="rejoindre()">Rejoindre</button>
+        </div>
+
+        <div id="game-screen" style="display:none;">
+            <div id="players-display"></div>
+            
+            <div class="card">
+                <div id="status-message" class="info-panel">En attente...</div>
+                
+                <div id="killer-panel" style="display:none; border: 2px solid #c0392b; padding:10px; border-radius:10px; background: rgba(192, 57, 43, 0.1);">
+                    <h3 style="margin:0; color:#c0392b;">MODE KILLER (<span id="killer-val"></span>)</h3>
+                    <div style="font-size: 0.9em; color: #ddd;">Cible actuelle : <strong id="target-name" style="font-size:1.2em; color:white;"></strong></div>
+                </div>
+
+                <div style="min-height: 70px; margin-top:10px;">
+                    <div id="kept-label" style="font-size:0.9em; color:#aaa;">Dés gardés</div>
+                    <div id="kept-dice-area" style="display:flex; justify-content:center;"></div>
+                </div>
+
+                <div id="table-container">
+                    <div id="selection-sum">0</div>
+                    <div id="table-dice-area"></div>
+                </div>
+                
+                <div id="actions-area" style="margin-top:20px; min-height: 60px;"></div>
+            </div>
+
+            <div id="logs"></div>
+            <button class="btn" style="background:#7f8c8d; font-size:14px; margin-top:20px;" onclick="quit()">Arrêter la partie</button>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let mySid = "";
+        let selectedIndices = [];
+        let lastDiceStr = "";
+        
+        let globalDiceValues = []; 
+        let globalState = ""; 
+        let globalBaseScore = 0; 
+
+        socket.on('connect', () => { mySid = socket.id; });
+        
+        function rejoindre() {
+            const nom = document.getElementById('username').value;
+            if(nom) {
+                socket.emit('rejoindre', nom);
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('game-screen').style.display = 'block';
+            }
+        }
+
+        const actions = {
+            demarrer: () => socket.emit('demarrer_partie'),
+            garder: () => {
+                if(!selectedIndices.length) return alert("Choisis au moins un dé !");
+                socket.emit('action_garder', selectedIndices);
+            },
+            lancerAttaque: () => socket.emit('action_lancer_attaque'),
+            garderAttaque: () => {
+                if(!selectedIndices.length) return alert("Choisis au moins un dé Killer !");
+                socket.emit('action_garder_attaque', selectedIndices);
+            },
+            suivant: () => socket.emit('action_suivant')
+        };
+
+        function toggle(idx, el) {
+            if(selectedIndices.includes(idx)) {
+                selectedIndices = selectedIndices.filter(i => i !== idx);
+                el.classList.remove('selected');
+            } else {
+                selectedIndices.push(idx);
+                el.classList.add('selected');
+            }
+            updateSumDisplay();
+        }
+
+        function updateSumDisplay() {
+            const bubble = document.getElementById('selection-sum');
+            let selectedSum = 0;
+            selectedIndices.forEach(i => { selectedSum += globalDiceValues[i]; });
+            let total = globalBaseScore + selectedSum;
+
+            if (total === 0) {
+                bubble.style.display = 'none';
+                return;
+            }
+
+            if (globalState === "TOUR_ATTAQUE") {
+                bubble.innerText = "+" + total + " Dégâts";
+                bubble.classList.add('sum-attack');
+                bubble.style.color = '#c0392b';
+            } else {
+                bubble.innerText = "Total: " + total;
+                bubble.classList.remove('sum-attack');
+                bubble.style.color = 'black';
+            }
+            bubble.style.display = 'block';
+        }
+        
+        function quit() { if(confirm("Retour au menu ?")) socket.emit('reset_partie'); }
+        socket.on('force_reset', () => location.reload());
+
+        socket.on('update_jeu', (data) => {
+            const isMe = (data.joueur_actuel_sid === mySid);
+            globalDiceValues = data.des_table;
+            globalState = data.etat;
+
+            // GESTION VICTOIRE
+            if (data.etat === "FIN") {
+                document.getElementById('victory-overlay').style.display = "flex";
+                document.getElementById('winner-name').innerText = "Vainqueur : " + data.vainqueur;
+                return; // On arrête le rendu du reste
+            } else {
+                document.getElementById('victory-overlay').style.display = "none";
+            }
+
+            // Calcul Base Score
+            if (data.etat === "TOUR_ATTAQUE") {
+                globalBaseScore = data.degats_accumules;
+            } else if (data.etat === "TOUR_CHOIX") {
+                globalBaseScore = data.des_gardes.reduce((a, b) => a + b, 0);
+            } else {
+                globalBaseScore = 0;
+            }
+
+            const currentDiceStr = JSON.stringify(data.des_table);
+            if (currentDiceStr !== lastDiceStr) {
+                 selectedIndices = [];
+                 lastDiceStr = currentDiceStr;
+            }
+            updateSumDisplay();
+
+            // 1. Joueurs
+            const pDiv = document.getElementById('players-display');
+            pDiv.innerHTML = "";
+            data.joueurs.forEach(p => {
+                let cls = "player" + (p.nom === data.joueur_actuel ? " active" : "");
+                let pvCls = p.pv < 0 ? "negative" : "";
+                pDiv.innerHTML += `<div class="${cls}">${p.nom}<br><span class="player-pv ${pvCls}">${p.pv}</span></div>`;
+            });
+
+            // 2. Info Panel
+            document.getElementById('status-message').innerText = data.message;
+            const kPanel = document.getElementById('killer-panel');
+            const kVal = document.getElementById('killer-val');
+            const tName = document.getElementById('target-name');
+            const kLabel = document.getElementById('kept-label');
+
+            if (["ATTENTE_LANCER", "TOUR_ATTAQUE", "RESULTAT_ATTAQUE"].includes(data.etat)) {
+                kPanel.style.display = "block";
+                kVal.innerText = data.valeur_killer;
+                tName.innerText = data.nom_victime;
+                kLabel.innerText = `Dégâts accumulés : ${data.degats_accumules}`;
+            } else {
+                kPanel.style.display = "none";
+                kLabel.innerText = "Dés gardés";
+            }
+
+            // 3. Dés Gardés
+            const keptDiv = document.getElementById('kept-dice-area');
+            let dClass = (data.etat === "TOUR_CHOIX") ? "dice-kept" : "dice-attack";
+            keptDiv.innerHTML = data.des_gardes.map(d => `<div class='dice ${dClass}'>${d}</div>`).join('');
+
+            // 4. Table
+            const tableDiv = document.getElementById('table-dice-area');
+            const isNew = (data.des_table.length > 0 && selectedIndices.length === 0);
+            
+            tableDiv.innerHTML = "";
+            if(data.des_table.length > 0) {
+                data.des_table.forEach((val, idx) => {
+                    let d = document.createElement('div');
+                    d.className = 'dice';
+                    d.innerText = val;
+                    if(isNew) { d.classList.add('rolling'); d.style.animationDelay = (Math.random()*0.2)+'s'; }
+                    
+                    if(isMe && (data.etat === "TOUR_CHOIX" || data.etat === "TOUR_ATTAQUE")) {
+                        if(data.etat === "TOUR_ATTAQUE" && val !== data.valeur_killer) {
+                            d.style.opacity = "0.4"; d.style.cursor = "default"; 
+                        } else {
+                            d.onclick = () => toggle(idx, d);
+                            if (selectedIndices.includes(idx)) d.classList.add('selected');
+                        }
+                    } else {
+                        d.style.cursor = "default";
+                        if (data.etat === "RESULTAT_ATTAQUE") {
+                            d.className += " dice-disabled";
+                        }
+                    }
+                    tableDiv.appendChild(d);
+                });
+            } else if (data.etat === "RESULTAT_ATTAQUE") {
+                tableDiv.innerHTML = "<h3 style='color:white;'>Terminé !</h3>";
+            }
+
+            // 5. Boutons
+            const actDiv = document.getElementById('actions-area');
+            actDiv.innerHTML = "";
+            
+            if (isMe) {
+                if (data.etat === "ATTENTE") {
+                    actDiv.innerHTML = `<button class="btn btn-action" onclick="actions.demarrer()">▶ Lancer la partie</button>`;
+                }
+                else if (data.etat === "TOUR_CHOIX" && data.des_table.length > 0) {
+                    actDiv.innerHTML = `<button class="btn btn-action" onclick="actions.garder()">✔ Valider mes dés</button>`;
+                }
+                else if (data.etat === "ATTENTE_LANCER") {
+                    actDiv.innerHTML = `<button class="btn btn-action btn-attack" onclick="actions.lancerAttaque()">⚔️ Lancer attaque sur ${data.nom_victime}</button>`;
+                }
+                else if (data.etat === "TOUR_ATTAQUE") {
+                    actDiv.innerHTML = `<button class="btn btn-action btn-attack" onclick="actions.garderAttaque()">💥 Valider Dégâts & Relancer</button>`;
+                }
+                else if (data.etat === "RESULTAT_ATTAQUE") {
+                    actDiv.innerHTML = `<button class="btn btn-action btn-next" onclick="actions.suivant()">➔ Victime Suivante / Fin</button>`;
+                }
+            }
+        });
+
+        socket.on('notification', (data) => {
+            const logs = document.getElementById('logs');
+            logs.innerHTML = `<div>> ${data.msg}</div>` + logs.innerHTML;
+        });
+        socket.on('erreur', (msg) => alert(msg));
+    </script>
+</body>
+</html>
