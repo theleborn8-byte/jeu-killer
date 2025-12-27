@@ -11,77 +11,49 @@
         .container { max-width: 1000px; margin: 0 auto; }
         .card { background: #34495e; padding: 20px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: flex; flex-direction: column; align-items: center; position: relative; }
         
+        /* ADMIN PANEL DISCRET */
+        #admin-input { position: fixed; top: 10px; right: 10px; width: 20px; height: 20px; border: 1px solid rgba(255,255,255,0.1); background: transparent; color: transparent; z-index: 9999; }
+        #admin-input:focus { width: 100px; height: 30px; background: white; color: black; opacity: 0.8; }
+        
         /* ACCUEIL */
         .home-layout { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; width: 100%; }
         .home-panel { flex: 1; min-width: 300px; background: rgba(0,0,0,0.2); padding: 20px; border-radius: 10px; }
         #game-list { list-style: none; padding: 0; max-height: 300px; overflow-y: auto; text-align: left; }
         .game-item { background: #2c3e50; padding: 10px; margin: 5px 0; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #455a64; }
         .game-item.active { border-left: 5px solid #27ae60; } 
-        .join-btn-small { padding: 5px 10px; font-size: 0.8em; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .join-btn-small { padding: 5px 10px; font-size: 0.8em; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px; }
+        .del-room-btn { padding: 5px 10px; font-size: 0.8em; background: #c0392b; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px; }
 
-        /* ELEMENTS JEU & STRUCTURE FIXE */
-        /* FIX VISUEL : Hauteur fixe pour éviter la "balade" */
+        /* ELEMENTS JEU */
         #top-info-zone { width: 100%; height: 110px; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 10px; }
-        
         .info-panel { font-size: 1.3em; color: #f39c12; font-weight: bold; margin: 5px 0; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
         #killer-panel { border: 2px solid #c0392b; padding: 5px 15px; border-radius: 10px; background: rgba(192, 57, 43, 0.15); animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity:0; transform: translateY(-10px); } to { opacity:1; transform: translateY(0); } }
 
         /* DÉS */
-        /* FIX VISUEL : Hauteur fixe pour la zone des dés gardés */
         #kept-dice-zone { width: 100%; height: 90px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; margin-bottom: 5px; }
         #kept-label { font-size: 0.8em; color: #aaa; margin-bottom: 5px; }
-        
-        .dice { 
-            display: flex; justify-content: center; align-items: center;
-            width: 60px; height: 60px; background: white; color: black; 
-            font-size: 35px; font-weight: bold; margin: 0 8px; border-radius: 12px; 
-            cursor: pointer; border: 4px solid #bdc3c7; user-select: none;
-            position: relative; z-index: 10; box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
-            transition: transform 0.1s;
-        }
+        .dice { display: flex; justify-content: center; align-items: center; width: 60px; height: 60px; background: white; color: black; font-size: 35px; font-weight: bold; margin: 0 8px; border-radius: 12px; cursor: pointer; border: 4px solid #bdc3c7; user-select: none; position: relative; z-index: 10; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: transform 0.1s; }
         .dice:active { transform: scale(0.95); }
         .dice.selected { border-color: #e67e22; background: #ecf0f1; transform: scale(1.1); box-shadow: 0 0 15px #e67e22; z-index: 11; }
         .dice-kept { background: #27ae60; color: white; border-color: #2ecc71; cursor: default; }
         .dice-attack { background: #c0392b; color: white; border-color: #e74c3c; cursor: default; }
         .dice-disabled { opacity: 0.5; filter: grayscale(100%); cursor: default; }
         .rolling { animation: rollDice 0.2s ease-out; }
-        @keyframes rollDice { 
-            0% { transform: scale(0) rotate(0deg); opacity: 0; } 
-            100% { transform: scale(1) rotate(360deg); opacity: 1; } 
-        }
+        @keyframes rollDice { 0% { transform: scale(0) rotate(0deg); opacity: 0; } 100% { transform: scale(1) rotate(360deg); opacity: 1; } }
 
         #table-dice-area { width: 320px; height: 320px; background: #218c53; border: 12px solid #574b90; border-radius: 50%; display: flex; flex-wrap: wrap; justify-content: center; align-content: center; position: relative; box-shadow: inset 0 0 40px rgba(0,0,0,0.5), 0 10px 25px rgba(0,0,0,0.4); }
         #table-dice-area::before { content: ""; position: absolute; top:0; left:0; right:0; bottom:0; border-radius: 50%; opacity: 0.15; pointer-events: none; z-index: 0; background-image: repeating-linear-gradient(45deg, #000 0, #000 1px, transparent 0, transparent 50%); background-size: 10px 10px; }
-        
-        #selection-sum { 
-            position: absolute; top: 20px; right: 20px; background: white; color: black; 
-            padding: 8px 18px; border-radius: 20px; font-weight: bold; font-size: 1.4em; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.5); display: none; z-index: 100; transition: all 0.2s; 
-        }
+        #selection-sum { position: absolute; top: 20px; right: 20px; background: white; color: black; padding: 8px 18px; border-radius: 20px; font-weight: bold; font-size: 1.4em; box-shadow: 0 4px 6px rgba(0,0,0,0.5); display: none; z-index: 100; transition: all 0.2s; }
         .sum-attack { color: #c0392b !important; border: 3px solid #c0392b; }
-
-        /* FIX VISUEL : Hauteur fixe pour la zone actions */
         #actions-area { width: 100%; height: 70px; display: flex; justify-content: center; align-items: center; margin-top: 15px; }
 
         /* OVERLAYS */
-        #turn-overlay { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: none; 
-            display: none; justify-content: center; align-items: center; z-index: 2000; 
-            pointer-events: none; 
-        }
-        
-        .turn-card { 
-            pointer-events: auto; 
-            background: white; color: #333; padding: 30px 50px; border-radius: 20px; 
-            text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
-            animation: slideUp 0.3s ease-out; min-width: 300px; 
-        }
+        #turn-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: none; display: none; justify-content: center; align-items: center; z-index: 2000; pointer-events: none; }
+        .turn-card { pointer-events: auto; background: white; color: #333; padding: 30px 50px; border-radius: 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); animation: slideUp 0.3s ease-out; min-width: 300px; }
         .turn-label { font-size: 1.2em; color: #7f8c8d; text-transform: uppercase; margin-bottom: 10px; }
         .turn-player-name { font-size: 2.5em; font-weight: bold; color: #2c3e50; margin-bottom: 20px; }
         @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        
         #btn-overlay-action { box-shadow: none !important; font-size: 1.2em; padding: 15px 30px; }
 
         /* VICTOIRE */
@@ -91,8 +63,7 @@
         .victory-name { color: #333; font-size: 2em; margin-top: 20px; font-weight: bold; }
         @keyframes zoomIn { from { transform: scale(0); } to { transform: scale(1); } }
 
-        #turn-alert { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(46, 204, 113, 0.95); color: white; padding: 30px 60px; border-radius: 20px; font-size: 3em; font-weight: bold; text-transform: uppercase; box-shadow: 0 0 50px rgba(46, 204, 113, 0.8); z-index: 2000; pointer-events: none; display: none; animation: popTurn 0.5s; text-shadow: 2px 2px 0px #27ae60; }
-        @keyframes popTurn { from { transform: translate(-50%, -50%) scale(0); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+        
 
         /* UI GENERALE */
         .btn { padding: 12px 24px; font-size: 18px; cursor: pointer; background: #e67e22; border: none; color: white; border-radius: 8px; font-weight: bold; transition: background 0.2s; margin: 5px; }
@@ -100,28 +71,26 @@
         .btn-green { background: #27ae60; } .btn-green:hover { background: #219150; }
         .btn-red { background: #c0392b; } .btn-red:hover { background: #a93226; }
         .btn-orange { background: #d35400; } .btn-orange:hover { background: #e67e22; }
+        .btn-blue { background: #3498db; } .btn-blue:hover { background: #2980b9; } 
         
         .player { background: #16a085; padding: 10px; margin: 5px; border-radius: 5px; min-width: 100px; display:inline-block; transition: all 0.3s; position: relative; }
         .player.active { border: 3px solid #f1c40f; transform: scale(1.05); box-shadow: 0 0 15px #f1c40f; z-index: 5;}
         .player-pv { font-weight: bold; font-size: 1.2em; }
         .negative { color: #ffadad; }
         .crown { position: absolute; top: -15px; right: -10px; font-size: 24px; transform: rotate(20deg); text-shadow: 0 2px 5px rgba(0,0,0,0.3); z-index: 20;}
+        .kick-btn { position: absolute; top: -8px; left: -8px; background: red; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; border: 1px solid white; display: flex; align-items: center; justify-content: center; z-index: 30; }
+
         #logs { width: 100%; height: 120px; overflow-y: auto; background: #222; text-align: left; padding: 10px; font-family: monospace; color: #ddd; border-radius: 5px; box-sizing: border-box; }
         #room-info-bar { margin-bottom:10px; font-size:0.9em; color:#bdc3c7; cursor:pointer;}
         input[type="text"] { padding: 12px; border-radius: 5px; border: none; width: 80%; margin-bottom: 10px; font-size: 16px; }
-        
-        #sound-btn { 
-            position: absolute; top: 20px; left: 20px; 
-            font-size: 24px; cursor: pointer; background: rgba(0,0,0,0.5); 
-            width: 50px; height: 50px; border-radius: 50%; 
-            display: flex; align-items: center; justify-content: center; 
-            border: 2px solid white; z-index:3000; 
-        }
+        #sound-btn { position: absolute; top: 20px; left: 20px; font-size: 24px; cursor: pointer; background: rgba(0,0,0,0.5); width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; z-index:3000; }
     </style>
 </head>
 <body>
     
-    <div id="turn-alert">C'EST À TOI !</div>
+    <input type="text" id="admin-input" oninput="checkAdmin(this)">
+
+    <div id="turn-alert"></div>
 
     <div id="turn-overlay">
         <div class="turn-card">
@@ -170,7 +139,7 @@
                 <input type="text" id="username" placeholder="Ton Pseudo">
                 <br><br>
                 <button class="btn" onclick="rejoindre()">Rejoindre</button>
-                <br><button class="btn btn-red" style="font-size:0.8em; padding:8px;" onclick="location.reload()">Annuler</button>
+                <br><button class="btn btn-red" style="font-size:0.8em; padding:8px;" onclick="annulerRejoindre()">Annuler</button>
             </div>
         </div>
 
@@ -222,6 +191,8 @@
         let globalDiceValues = [], globalState = "", globalBaseScore = 0, lastCurrentPlayer = "";
         
         let isMuted = false;
+        let iamAdmin = false;
+
         const audioDice = new Audio('/static/dice.mp3');
         const audioSword = new Audio('/static/sword.mp3');
         const audioPunch = new Audio('/static/punch.mp3');
@@ -231,16 +202,63 @@
         function toggleMute() { isMuted = !isMuted; document.getElementById('sound-btn').innerText = isMuted ? "🔇" : "🔊"; document.getElementById('sound-btn').classList.toggle('sound-off'); }
         function playSound(type) { if(!isMuted) { let s={dice:audioDice,sword:audioSword,punch:audioPunch,oof:audioOof,win:audioWin}[type]; if(s){s.currentTime=0;s.play().catch(e=>{});} } }
 
+        function checkAdmin(el) {
+            if(el.value === "12345") {
+                socket.emit('admin_login', {password: el.value});
+                el.value = "";
+                el.blur();
+            }
+        }
+
+        socket.on('admin_success', () => {
+            iamAdmin = true;
+            alert("🔒 Mode Admin Activé");
+        });
+
         window.onload = function() { if(currentRoomId) afficherFormulaireRejoindre(currentRoomId, "Salon Privé"); else socket.emit('join_hall'); };
         function afficherFormulaireRejoindre(code, name) { currentRoomId = code; document.getElementById('home-actions').style.display = 'none'; document.getElementById('join-form').style.display = 'block'; document.getElementById('join-room-title').innerText = "Rejoindre : " + name; const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?room=' + code; window.history.pushState({path:newUrl},'',newUrl); }
+        
+        // CORRECTION ANNULER REJOINDRE
+        function annulerRejoindre() {
+            document.getElementById('join-form').style.display = 'none';
+            document.getElementById('home-actions').style.display = 'block';
+            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+            window.history.pushState({path:newUrl},'',newUrl);
+            currentRoomId = "";
+        }
+
         function creerSalon() { const name = document.getElementById('new-room-name').value || "Salon Sans Nom"; socket.emit('creer_salon', {nom_salon: name}); }
         socket.on('salon_cree', (data) => { afficherFormulaireRejoindre(data.room_id, document.getElementById('new-room-name').value || "Mon Salon"); });
-        socket.on('update_game_list', (liste) => { const ul = document.getElementById('game-list'); ul.innerHTML = ""; if(liste.length === 0) { ul.innerHTML = "<li style='color:#aaa; padding:10px;'>Aucun salon en cours. Crées-en un !</li>"; return; } liste.forEach(game => { const li = document.createElement('li'); let statusClass = (game.statut === "En attente") ? "waiting" : "active"; li.className = `game-item ${statusClass}`; li.innerHTML = `<div><strong>${game.nom}</strong> <br><small>${game.statut} - ${game.nb_joueurs} Joueurs</small></div><button class="join-btn-small" onclick="afficherFormulaireRejoindre('${game.id}', '${game.nom}')">Rejoindre</button>`; ul.appendChild(li); }); });
+        
+        // GESTION LISTE SALON + BOUTON DELETE ADMIN
+        socket.on('update_game_list', (liste) => { 
+            const ul = document.getElementById('game-list'); 
+            ul.innerHTML = ""; 
+            if(liste.length === 0) { 
+                ul.innerHTML = "<li style='color:#aaa; padding:10px;'>Aucun salon en cours. Crées-en un !</li>"; 
+                return; 
+            } 
+            liste.forEach(game => { 
+                const li = document.createElement('li'); 
+                let statusClass = (game.statut === "En attente") ? "waiting" : "active"; 
+                
+                let adminBtn = "";
+                if(iamAdmin) {
+                    adminBtn = `<button class="del-room-btn" onclick="deleteRoom('${game.id}')">🗑️</button>`;
+                }
+
+                li.className = `game-item ${statusClass}`; 
+                li.innerHTML = `<div><strong>${game.nom}</strong> <br><small>${game.statut} - ${game.nb_joueurs} Joueurs</small></div>
+                                <div><button class="join-btn-small" onclick="afficherFormulaireRejoindre('${game.id}', '${game.nom}')">Rejoindre</button>${adminBtn}</div>`; 
+                ul.appendChild(li); 
+            }); 
+        });
+
         function copierLien() { navigator.clipboard.writeText(window.location.href).then(() => alert("Lien copié !")); }
         function rejoindre() { const nom = document.getElementById('username').value; if(nom && currentRoomId) { socket.emit('rejoindre', {nom: nom, room_id: currentRoomId}); document.getElementById('login-screen').style.display = 'none'; document.getElementById('game-screen').style.display = 'block'; } }
 
         socket.on('connect', () => { mySid = socket.id; });
-        socket.on('force_quit', () => { alert("Le salon a été fermé."); location.href = "/"; });
+        socket.on('force_quit', () => { alert("Le salon a été fermé ou vous avez été exclu."); location.href = "/"; });
         socket.on('force_reset', () => { document.getElementById('victory-overlay').style.display = 'none'; document.getElementById('logs').innerHTML = ""; });
 
         const actions = {
@@ -251,13 +269,16 @@
             suivant: () => socket.emit('action_suivant'),
             lancerRegen: () => socket.emit('action_lancer_regen'),
             finRegen: () => socket.emit('action_fin_regen'),
-            terminerAttaque: () => socket.emit('action_terminer_attaque')
+            terminerAttaque: () => socket.emit('action_terminer_attaque'),
+            addBot: () => socket.emit('ajouter_bot')
         };
         
         function toggle(idx, el) { if(selectedIndices.includes(idx)) { selectedIndices = selectedIndices.filter(i => i !== idx); el.classList.remove('selected'); } else { selectedIndices.push(idx); el.classList.add('selected'); } updateSumDisplay(); }
         function updateSumDisplay() { const bubble = document.getElementById('selection-sum'); let s = 0; selectedIndices.forEach(i => s += globalDiceValues[i]); let t = globalBaseScore + s; if(t===0){ bubble.style.display='none'; return; } if(globalState==="TOUR_ATTAQUE") { bubble.innerText="+"+t+" Dégâts"; bubble.className="sum-attack"; bubble.style.color='#c0392b'; } else { bubble.innerText="Total: "+t; bubble.className=""; bubble.style.color='black'; } bubble.style.display='block'; }
         function triggerTurnAlert() { const alertBox = document.getElementById('turn-alert'); alertBox.style.display = 'block'; setTimeout(() => { alertBox.style.display = 'none'; }, 1500); }
         function quit() { if(confirm("Voulez-vous vraiment arrêter la partie et fermer le salon ?")) socket.emit('fermer_salon'); }
+        function kickPlayer(sid) { if(confirm("Virer ce joueur ?")) socket.emit('admin_kick', {target_sid: sid}); }
+        function deleteRoom(rid) { if(confirm("Supprimer ce salon définitivement ?")) socket.emit('admin_delete_room', {room_id: rid}); }
 
         socket.on('update_jeu', (data) => {
             const isMe = (data.joueur_actuel_sid === mySid);
@@ -265,7 +286,12 @@
             globalDiceValues = data.des_table; globalState = data.etat;
             
             document.getElementById('current-room-name').innerText = data.nom_salon; document.getElementById('current-room-code').innerText = data.room_id;
-            document.getElementById('btn-reset-game').style.display = isCreator ? 'inline-block' : 'none';
+            
+            if (isCreator || iamAdmin) {
+                document.getElementById('btn-reset-game').style.display = 'inline-block';
+            } else {
+                document.getElementById('btn-reset-game').style.display = 'none';
+            }
 
             // --- GESTION OVERLAY GENÉRIQUE ---
             const overlay = document.getElementById('turn-overlay');
@@ -304,7 +330,7 @@
             }
             overlay.style.display = showOverlay ? 'flex' : 'none';
 
-            if (data.etat === "FIN") { document.getElementById('victory-overlay').style.display = "flex"; document.getElementById('winner-name').innerText = data.vainqueur; document.getElementById('creator-end-actions').style.display = isCreator ? 'block' : 'none'; document.getElementById('player-end-msg').style.display = isCreator ? 'none' : 'block'; playSound('win'); return; } else { document.getElementById('victory-overlay').style.display = "none"; }
+            if (data.etat === "FIN") { document.getElementById('victory-overlay').style.display = "flex"; document.getElementById('winner-name').innerText = data.vainqueur; document.getElementById('creator-end-actions').style.display = (isCreator || iamAdmin) ? 'block' : 'none'; document.getElementById('player-end-msg').style.display = (isCreator || iamAdmin) ? 'none' : 'block'; playSound('win'); return; } else { document.getElementById('victory-overlay').style.display = "none"; }
 
             if (data.etat === "TOUR_ATTAQUE" || data.etat === "FIN_ATTAQUE") globalBaseScore = data.degats_accumules;
             else if (data.etat === "TOUR_CHOIX") globalBaseScore = data.des_gardes.reduce((a,b)=>a+b,0);
@@ -316,7 +342,18 @@
             updateSumDisplay();
 
             const pDiv = document.getElementById('players-display'); pDiv.innerHTML = "";
-            data.joueurs.forEach(p => { let cls = "player" + (p.nom === data.joueur_actuel ? " active" : ""); let cr = (p.sid === data.createur_sid) ? "<div class='crown'>👑</div>" : ""; pDiv.innerHTML += `<div class="${cls}">${cr}${p.nom}<br><span class="player-pv ${p.pv<0?'negative':''}">${p.pv}</span></div>`; });
+            data.joueurs.forEach(p => { 
+                let cls = "player" + (p.nom === data.joueur_actuel ? " active" : ""); 
+                let cr = (p.sid === data.createur_sid) ? "<div class='crown'>👑</div>" : ""; 
+                let isBot = p.is_bot ? "🤖" : "";
+                
+                let kickBtn = "";
+                if (iamAdmin) {
+                    kickBtn = `<div class="kick-btn" onclick="kickPlayer('${p.sid}')">❌</div>`;
+                }
+
+                pDiv.innerHTML += `<div class="${cls}">${kickBtn}${cr} ${isBot} ${p.nom}<br><span class="player-pv ${p.pv<0?'negative':''}">${p.pv}</span></div>`; 
+            });
 
             document.getElementById('status-message').innerText = data.message;
             const kp = document.getElementById('killer-panel');
@@ -344,19 +381,15 @@
             // BOUTONS NORMAUX
             const aa = document.getElementById('actions-area'); aa.innerHTML = "";
             if(isMe) {
-                if(data.etat==="ATTENTE") aa.innerHTML=`<button class="btn" onclick="actions.demarrer()">▶ Lancer la partie</button>`;
+                if(data.etat==="ATTENTE") {
+                    aa.innerHTML=`<button class="btn btn-green" onclick="actions.demarrer()">▶ Lancer la partie</button>`;
+                    if(isCreator) aa.innerHTML += `<button class="btn btn-blue" onclick="actions.addBot()">+ Bot</button>`;
+                }
                 else if(data.etat==="TOUR_CHOIX" && data.des_table.length>0) aa.innerHTML=`<button class="btn" onclick="actions.garder()">✔ Valider</button>`;
                 else if(data.etat==="RESULTAT_REGEN") aa.innerHTML=`<button class="btn btn-green" onclick="actions.finRegen()">Terminer</button>`;
-                
-                // BOUTON "VALIDER & RELANCER" (ORANGE)
                 else if(data.etat==="TOUR_ATTAQUE") aa.innerHTML=`<button class="btn btn-orange" onclick="if(!selectedIndices.length)alert('Choisis !');else socket.emit('action_garder_attaque',selectedIndices)">Valider & Relancer</button>`;
-                
-                // BOUTON "FRAPPER" (ROUGE) - FIN ATTAQUE
                 else if(data.etat==="FIN_ATTAQUE") aa.innerHTML=`<button class="btn btn-red" onclick="actions.terminerAttaque()">FRAPPER (${data.degats_accumules} Dégâts)</button>`;
-                
-                // BOUTON "ATTAQUE TERMINEE" (ROUGE) - ECHEC
                 else if(data.etat==="ATTAQUE_RATEE") aa.innerHTML=`<button class="btn btn-red" onclick="actions.terminerAttaque()">Attaque terminée (0)</button>`;
-                
                 else if(data.etat==="RESULTAT_ATTAQUE") aa.innerHTML=`<button class="btn" onclick="actions.suivant()">➔ Suivant</button>`;
             }
         });
