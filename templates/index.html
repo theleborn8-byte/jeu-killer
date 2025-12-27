@@ -83,7 +83,35 @@
         #logs { width: 100%; height: 120px; overflow-y: auto; background: #222; text-align: left; padding: 10px; font-family: monospace; color: #ddd; border-radius: 5px; box-sizing: border-box; }
         #room-info-bar { margin-bottom:10px; font-size:0.9em; color:#bdc3c7; cursor:pointer;}
         input[type="text"] { padding: 12px; border-radius: 5px; border: none; width: 80%; margin-bottom: 10px; font-size: 16px; }
-        #sound-btn { position: absolute; top: 20px; left: 20px; font-size: 24px; cursor: pointer; background: rgba(0,0,0,0.5); width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; z-index:3000; }
+        
+        /* MENU AUDIO */
+        #sound-container { position: absolute; top: 20px; left: 20px; z-index: 3000; }
+        #sound-btn { 
+            font-size: 24px; cursor: pointer; background: rgba(0,0,0,0.5); 
+            width: 50px; height: 50px; border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; 
+            border: 2px solid white; position: relative;
+        }
+        #sound-menu {
+            display: none;
+            position: absolute; top: 60px; left: 0;
+            background: rgba(44, 62, 80, 0.95);
+            border: 1px solid #7f8c8d;
+            border-radius: 10px;
+            padding: 15px;
+            width: 220px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            text-align: left;
+        }
+        .sound-row { display: flex; align-items: center; margin-bottom: 10px; color: white; font-size: 0.9em; }
+        /* Style pour les labels cliquables */
+        .sound-label { width: 80px; cursor: pointer; user-select: none; transition: opacity 0.2s; }
+        .sound-label:hover { opacity: 0.8; }
+        .sound-label.muted { color: #e74c3c; text-decoration: line-through; }
+        
+        input[type="range"] { flex: 1; cursor: pointer; }
+        .mute-all-btn { width: 100%; padding: 5px; background: #c0392b; border: none; color: white; border-radius: 5px; cursor: pointer; font-weight: bold; margin-bottom: 10px; }
+        .mute-all-btn.active { background: #27ae60; }
     </style>
 </head>
 <body>
@@ -148,7 +176,34 @@
             <div style="display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; width: 100%; min-height: 80px; align-items: center;" id="players-display"></div>
             
             <div class="card">
-                <button id="sound-btn" onclick="toggleMute()">🔊</button>
+                <div id="sound-container">
+                    <div id="sound-btn" onclick="toggleSoundMenu()">🔊</div>
+                    <div id="sound-menu">
+                        <button id="master-mute-btn" class="mute-all-btn" onclick="toggleGlobalMute()">🔇 COUPER TOUT</button>
+                        
+                        <div class="sound-row">
+                            <span id="lbl-dice" class="sound-label" onclick="toggleSingleMute('dice')">🔊 Dés</span>
+                            <input id="vol-dice" type="range" min="0" max="1" step="0.1" value="0.5" oninput="setVolume('dice', this.value)">
+                        </div>
+                        <div class="sound-row">
+                            <span id="lbl-oof" class="sound-label" onclick="toggleSingleMute('oof')">🔊 Oof</span>
+                            <input id="vol-oof" type="range" min="0" max="1" step="0.1" value="0.5" oninput="setVolume('oof', this.value)">
+                        </div>
+                        <div class="sound-row">
+                            <span id="lbl-punch" class="sound-label" onclick="toggleSingleMute('punch')">🔊 Coup</span>
+                            <input id="vol-punch" type="range" min="0" max="1" step="0.1" value="0.5" oninput="setVolume('punch', this.value)">
+                        </div>
+                        <div class="sound-row">
+                            <span id="lbl-sword" class="sound-label" onclick="toggleSingleMute('sword')">🔊 Épée</span>
+                            <input id="vol-sword" type="range" min="0" max="1" step="0.1" value="0.5" oninput="setVolume('sword', this.value)">
+                        </div>
+                        <div class="sound-row">
+                            <span id="lbl-win" class="sound-label" onclick="toggleSingleMute('win')">🔊 Win</span>
+                            <input id="vol-win" type="range" min="0" max="1" step="0.1" value="0.5" oninput="setVolume('win', this.value)">
+                        </div>
+                    </div>
+                </div>
+
                 <div id="selection-sum">0</div>
 
                 <div id="top-info-zone">
@@ -190,8 +245,10 @@
         let lastDiceStr = "";
         let globalDiceValues = [], globalState = "", globalBaseScore = 0, lastCurrentPlayer = "";
         
-        let isMuted = false;
-        let iamAdmin = false;
+        // GESTION AUDIO AVANCEE
+        let isGlobalMute = false;
+        let volumes = { dice: 0.5, sword: 0.5, punch: 0.5, oof: 0.5, win: 0.5 };
+        let lastVolumes = { dice: 0.5, sword: 0.5, punch: 0.5, oof: 0.5, win: 0.5 }; // Pour mémoriser avant mute
 
         const audioDice = new Audio('/static/dice.mp3');
         const audioSword = new Audio('/static/sword.mp3');
@@ -199,8 +256,98 @@
         const audioOof = new Audio('/static/oof.mp3');
         const audioWin = new Audio('/static/win.mp3');
         
-        function toggleMute() { isMuted = !isMuted; document.getElementById('sound-btn').innerText = isMuted ? "🔇" : "🔊"; document.getElementById('sound-btn').classList.toggle('sound-off'); }
-        function playSound(type) { if(!isMuted) { let s={dice:audioDice,sword:audioSword,punch:audioPunch,oof:audioOof,win:audioWin}[type]; if(s){s.currentTime=0;s.play().catch(e=>{});} } }
+        function toggleSoundMenu() {
+            const menu = document.getElementById('sound-menu');
+            menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+        }
+
+        // MUTE GENERAL
+        function toggleGlobalMute() {
+            isGlobalMute = !isGlobalMute;
+            const btn = document.getElementById('master-mute-btn');
+            const mainIcon = document.getElementById('sound-btn');
+            
+            if (isGlobalMute) {
+                btn.innerText = "🔊 ACTIVER TOUT";
+                btn.className = "mute-all-btn active";
+                mainIcon.innerText = "🔇";
+                mainIcon.classList.add('sound-off');
+            } else {
+                btn.innerText = "🔇 COUPER TOUT";
+                btn.className = "mute-all-btn";
+                mainIcon.innerText = "🔊";
+                mainIcon.classList.remove('sound-off');
+            }
+        }
+
+        // MUTE INDIVIDUEL (Au clic sur le texte)
+        function toggleSingleMute(type) {
+            const slider = document.getElementById(`vol-${type}`);
+            const currentVol = parseFloat(slider.value);
+
+            if (currentVol > 0) {
+                // On coupe
+                lastVolumes[type] = currentVol; // On mémorise
+                slider.value = 0;
+                setVolume(type, 0);
+            } else {
+                // On remet
+                let restore = lastVolumes[type];
+                if (restore === 0) restore = 0.5; // Sécurité si mémorisé à 0
+                slider.value = restore;
+                setVolume(type, restore);
+            }
+        }
+
+        // REGLAGE SLIDER
+        function setVolume(type, val) {
+            val = parseFloat(val);
+            volumes[type] = val;
+            
+            // Mise à jour visuelle du label (rouge/barré si 0)
+            const lbl = document.getElementById(`lbl-${type}`);
+            if(val === 0) {
+                lbl.classList.add('muted');
+                lbl.innerText = lbl.innerText.replace('🔊', '🔇');
+            } else {
+                lbl.classList.remove('muted');
+                lbl.innerText = lbl.innerText.replace('🔇', '🔊');
+                // Si on monte le son manuellement, on met à jour la mémoire "last" pour que le toggle soit cohérent
+                lastVolumes[type] = val; 
+            }
+        }
+
+        function playSound(type) { 
+            // 1. Si le mute général est activé, on arrête tout de suite
+            if(isGlobalMute) return;
+            
+            // 2. On récupère le volume pour ce son spécifique
+            let vol = volumes[type];
+
+            // 3. FIX DU BUG : Si le volume est strictement 0, on ne joue pas le son du tout
+            if (vol === 0) return;
+
+            // Sécurité : si jamais le volume n'est pas défini, on met 0.5
+            if (vol === undefined || vol === null) vol = 0.5;
+
+            let s = {dice:audioDice, sword:audioSword, punch:audioPunch, oof:audioOof, win:audioWin}[type];
+            if(s) {
+                s.volume = vol; // On applique le volume (qui peut être 0.1, 1, etc.)
+                s.currentTime = 0;
+                s.play().catch(e=>{});
+            } 
+        }
+
+        // Fermer le menu si on clique ailleurs
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('sound-menu');
+            const btn = document.getElementById('sound-btn');
+            if (!menu.contains(event.target) && !btn.contains(event.target)) {
+                menu.style.display = 'none';
+            }
+        });
+
+        let iamAdmin = false;
 
         function checkAdmin(el) {
             if(el.value === "12345") {
@@ -218,7 +365,6 @@
         window.onload = function() { if(currentRoomId) afficherFormulaireRejoindre(currentRoomId, "Salon Privé"); else socket.emit('join_hall'); };
         function afficherFormulaireRejoindre(code, name) { currentRoomId = code; document.getElementById('home-actions').style.display = 'none'; document.getElementById('join-form').style.display = 'block'; document.getElementById('join-room-title').innerText = "Rejoindre : " + name; const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?room=' + code; window.history.pushState({path:newUrl},'',newUrl); }
         
-        // CORRECTION ANNULER REJOINDRE
         function annulerRejoindre() {
             document.getElementById('join-form').style.display = 'none';
             document.getElementById('home-actions').style.display = 'block';
@@ -230,7 +376,6 @@
         function creerSalon() { const name = document.getElementById('new-room-name').value || "Salon Sans Nom"; socket.emit('creer_salon', {nom_salon: name}); }
         socket.on('salon_cree', (data) => { afficherFormulaireRejoindre(data.room_id, document.getElementById('new-room-name').value || "Mon Salon"); });
         
-        // GESTION LISTE SALON + BOUTON DELETE ADMIN
         socket.on('update_game_list', (liste) => { 
             const ul = document.getElementById('game-list'); 
             ul.innerHTML = ""; 
@@ -370,13 +515,36 @@
                 data.des_table.forEach((v,i) => {
                     let d=document.createElement('div'); d.className='dice'; d.innerText=v;
                     if(isNew){d.classList.add('rolling');d.style.animationDelay=(Math.random()*0.1)+'s';}
-                    if(isMe && (data.etat==="TOUR_CHOIX" || data.etat==="TOUR_ATTAQUE")) {
-                        if(data.etat==="TOUR_ATTAQUE" && v!==data.valeur_killer) {d.style.opacity="0.4";d.style.cursor="default";}
-                        else {d.onclick=()=>toggle(i,d); if(selectedIndices.includes(i))d.classList.add('selected');}
-                    } else {d.style.cursor="default"; if(data.etat==="RESULTAT_ATTAQUE")d.className+=" dice-disabled";}
+                    
+                    let interactif = false;
+                    let estGrise = false;
+
+                    if(isMe) {
+                        if (data.etat === "TOUR_CHOIX") {
+                            interactif = true;
+                        } else if (data.etat === "TOUR_ATTAQUE") {
+                            if (v === data.valeur_killer) interactif = true;
+                            else estGrise = true; 
+                        } else if (data.etat === "FIN_ATTAQUE" || data.etat === "ATTAQUE_RATEE") {
+                            estGrise = true; 
+                        }
+                    } else {
+                        d.style.cursor="default"; 
+                    }
+
+                    if (interactif) {
+                        d.onclick=()=>toggle(i,d); 
+                        if(selectedIndices.includes(i)) d.classList.add('selected');
+                    } else if (estGrise) {
+                        d.style.opacity="0.4";
+                        d.style.cursor="default";
+                    } else {
+                        d.style.cursor="default";
+                    }
+
                     ta.appendChild(d);
                 });
-            } else if (data.etat==="RESULTAT_ATTAQUE") ta.innerHTML="<h3 style='color:white'>Terminé !</h3>";
+            } else if (data.etat==="RESULTAT_ATTAQUE") ta.innerHTML="<h3 style='color:white'>...</h3>";
 
             // BOUTONS NORMAUX
             const aa = document.getElementById('actions-area'); aa.innerHTML = "";

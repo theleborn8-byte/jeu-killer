@@ -426,15 +426,17 @@ def handle_g_atk(indices):
 @socketio.on('action_terminer_attaque')
 def handle_fin_atk():
     jeu = get_game(request.sid)
+    # On accepte FIN_ATTAQUE (succès partiel) ou ATTAQUE_RATEE (échec total)
     if jeu and (jeu.etat == "FIN_ATTAQUE" or jeu.etat == "ATTAQUE_RATEE"):
         victime = jeu.joueurs[jeu.victime_actuelle_idx]
         if jeu.degats_accumules > 0:
             victime.pv -= jeu.degats_accumules
             emit('notification', {'msg': f"💥 -{jeu.degats_accumules} pour {victime.nom}", 'sound':'punch'}, to=jeu.id)
         else:
-            emit('notification', {'msg': "Aucun dégât."}, to=jeu.id)
-        jeu.etat = "RESULTAT_ATTAQUE"
-        jeu.broadcast_etat("Attaque terminée.")
+            emit('notification', {'msg': "Aucun dégât."}, to=jeu.id) # J'ai remis un petit son 'oof' discret si tu veux, sinon enlève 'sound'
+        
+        # MODIFICATION ICI : Au lieu de faire une pause, on enchaine direct
+        jeu.preparer_prochaine_victime()
 
 @socketio.on('action_suivant')
 def handle_next():
