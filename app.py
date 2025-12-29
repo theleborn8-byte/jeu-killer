@@ -172,17 +172,19 @@ def bot_validate_sequence(jeu):
             check_start_real_game(jeu)
 
 def check_start_real_game(jeu):
-    """Vérifie si tout le monde a validé pour lancer le 1er tour"""
     if all(p.est_pret for p in jeu.joueurs):
-        jeu.joueurs.sort(key=lambda p: p.pv) # On trie par PV
+        jeu.joueurs.sort(key=lambda p: p.pv)
         jeu.joueur_actuel_idx = 0
         jeu.etat = "TRANSITION_TOUR"
         
-        # MODIFICATION : Initialisation des "Vivants" au tout début de la partie réelle
+        # Réinitialisation des vivants (ajouté lors de notre précédente correction)
         jeu.ids_vivants_debut_tour = [p.sid for p in jeu.joueurs if p.pv >= 0]
         
         noms = " > ".join([p.nom for p in jeu.joueurs])
-        emit('notification', {'msg': f"Tout le monde est prêt ! Ordre : {noms}", 'sound': 'win'}, to=jeu.id)
+        
+        # CORRECTION ICI : Utiliser socketio.emit au lieu de emit tout court
+        socketio.emit('notification', {'msg': f"Tout le monde est prêt ! Ordre : {noms}", 'sound': 'win'}, to=jeu.id)
+        
         jeu.broadcast_etat("La partie commence !")
 
 # --- CERVEAU DU BOT (JEU) ---
