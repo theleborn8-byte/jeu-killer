@@ -6,91 +6,449 @@
     <title>Le Killer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
-        /* CSS GENERAL */
-        body { font-family: 'Segoe UI', sans-serif; background: #2c3e50; color: white; text-align: center; margin: 0; padding: 20px; overflow-y: scroll; }
-        .container { max-width: 1000px; margin: 0 auto; }
-        .card { background: #34495e; padding: 20px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: flex; flex-direction: column; align-items: center; position: relative; }
+        /* --- CSS GENERAL --- */
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: #2c3e50; 
+            color: white; 
+            text-align: center; 
+            margin: 0; 
+            padding: 20px; 
+            overflow-y: scroll; 
+        }
+        .container { 
+            max-width: 1000px; 
+            margin: 0 auto; 
+        }
+        .card { 
+            background: #34495e; 
+            padding: 20px; 
+            border-radius: 15px; 
+            margin-bottom: 20px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            position: relative; 
+        }
         
-        /* ADMIN PANEL DISCRET */
-        #admin-input { position: fixed; top: 10px; right: 10px; width: 20px; height: 20px; border: 1px solid rgba(255,255,255,0.1); background: transparent; color: transparent; z-index: 9999; }
-        #admin-input:focus { width: 100px; height: 30px; background: white; color: black; opacity: 0.8; }
+        /* ADMIN INPUT CACHÉ */
+        #admin-input { 
+            position: fixed; 
+            top: 10px; 
+            right: 10px; 
+            width: 20px; 
+            height: 20px; 
+            border: 1px solid rgba(255,255,255,0.1); 
+            background: transparent; 
+            color: transparent; 
+            z-index: 9999; 
+        }
+        #admin-input:focus { 
+            width: 100px; 
+            height: 30px; 
+            background: white; 
+            color: black; 
+            opacity: 0.8; 
+        }
         
-        /* ACCUEIL */
-        .home-layout { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; width: 100%; }
-        .home-panel { flex: 1; min-width: 300px; background: rgba(0,0,0,0.2); padding: 20px; border-radius: 10px; }
-        #game-list { list-style: none; padding: 0; max-height: 300px; overflow-y: auto; text-align: left; }
-        .game-item { background: #2c3e50; padding: 10px; margin: 5px 0; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #455a64; }
-        .game-item.active { border-left: 5px solid #27ae60; } 
-        .join-btn-small { padding: 5px 10px; font-size: 0.8em; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px; }
-        .del-room-btn { padding: 5px 10px; font-size: 0.8em; background: #c0392b; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px; }
+        /* ACCUEIL & SALONS */
+        .home-layout { 
+            display: flex; 
+            flex-wrap: wrap; 
+            justify-content: center; 
+            gap: 20px; 
+            width: 100%; 
+        }
+        .home-panel { 
+            flex: 1; 
+            min-width: 300px; 
+            background: rgba(0,0,0,0.2); 
+            padding: 20px; 
+            border-radius: 10px; 
+        }
+        #game-list { 
+            list-style: none; 
+            padding: 0; 
+            max-height: 300px; 
+            overflow-y: auto; 
+            text-align: left; 
+        }
+        .game-item { 
+            background: #2c3e50; 
+            padding: 10px; 
+            margin: 5px 0; 
+            border-radius: 5px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            border: 1px solid #455a64; 
+        }
+        .game-item.active { 
+            border-left: 5px solid #27ae60; 
+        } 
+        .join-btn-small { 
+            padding: 5px 10px; 
+            font-size: 0.8em; 
+            background: #3498db; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            margin-left: 5px; 
+        }
+        .del-room-btn { 
+            padding: 5px 10px; 
+            font-size: 0.8em; 
+            background: #c0392b; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            margin-left: 5px; 
+        }
 
         /* ELEMENTS JEU */
-        #top-info-zone { width: 100%; height: 110px; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 10px; }
-        .info-panel { font-size: 1.3em; color: #f39c12; font-weight: bold; margin: 5px 0; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
-        #killer-panel { border: 2px solid #c0392b; padding: 5px 15px; border-radius: 10px; background: rgba(192, 57, 43, 0.15); animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity:0; transform: translateY(-10px); } to { opacity:1; transform: translateY(0); } }
+        #top-info-zone { 
+            width: 100%; 
+            height: 110px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            margin-bottom: 10px; 
+        }
+        .info-panel { 
+            font-size: 1.3em; 
+            color: #f39c12; 
+            font-weight: bold; 
+            margin: 5px 0; 
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5); 
+        }
+        #killer-panel { 
+            border: 2px solid #c0392b; 
+            padding: 5px 15px; 
+            border-radius: 10px; 
+            background: rgba(192, 57, 43, 0.15); 
+            animation: fadeIn 0.3s ease; 
+        }
+        @keyframes fadeIn { 
+            from { opacity:0; transform: translateY(-10px); } 
+            to { opacity:1; transform: translateY(0); } 
+        }
 
         /* DÉS */
-        #kept-dice-zone { width: 100%; height: 90px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; margin-bottom: 5px; }
-        #kept-label { font-size: 0.8em; color: #aaa; margin-bottom: 5px; }
-        .dice { display: flex; justify-content: center; align-items: center; width: 60px; height: 60px; background: white; color: black; font-size: 35px; font-weight: bold; margin: 0 8px; border-radius: 12px; cursor: pointer; border: 4px solid #bdc3c7; user-select: none; position: relative; z-index: 10; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: transform 0.1s; }
+        #kept-dice-zone { 
+            width: 100%; 
+            height: 90px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: flex-start; 
+            margin-bottom: 5px; 
+        }
+        #kept-label { 
+            font-size: 0.8em; 
+            color: #aaa; 
+            margin-bottom: 5px; 
+        }
+        .dice { 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            width: 60px; 
+            height: 60px; 
+            background: white; 
+            color: black; 
+            font-size: 35px; 
+            font-weight: bold; 
+            margin: 0 8px; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            border: 4px solid #bdc3c7; 
+            user-select: none; 
+            position: relative; 
+            z-index: 10; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
+            transition: transform 0.1s; 
+        }
         .dice:active { transform: scale(0.95); }
-        .dice.selected { border-color: #e67e22; background: #ecf0f1; transform: scale(1.1); box-shadow: 0 0 15px #e67e22; z-index: 11; }
-        .dice-kept { background: #27ae60; color: white; border-color: #2ecc71; cursor: default; }
-        .dice-attack { background: #c0392b; color: white; border-color: #e74c3c; cursor: default; }
-        .dice-disabled { opacity: 0.5; filter: grayscale(100%); cursor: default; }
+        .dice.selected { 
+            border-color: #e67e22; 
+            background: #ecf0f1; 
+            transform: scale(1.1); 
+            box-shadow: 0 0 15px #e67e22; 
+            z-index: 11; 
+        }
+        .dice-kept { 
+            background: #27ae60; 
+            color: white; 
+            border-color: #2ecc71; 
+            cursor: default; 
+        }
+        .dice-attack { 
+            background: #c0392b; 
+            color: white; 
+            border-color: #e74c3c; 
+            cursor: default; 
+        }
+        .dice-disabled { 
+            opacity: 0.5; 
+            filter: grayscale(100%); 
+            cursor: default; 
+        }
         .rolling { animation: rollDice 0.2s ease-out; }
-        @keyframes rollDice { 0% { transform: scale(0) rotate(0deg); opacity: 0; } 100% { transform: scale(1) rotate(360deg); opacity: 1; } }
+        @keyframes rollDice { 
+            0% { transform: scale(0) rotate(0deg); opacity: 0; } 
+            100% { transform: scale(1) rotate(360deg); opacity: 1; } 
+        }
 
-        #table-dice-area { width: 320px; height: 320px; background: #218c53; border: 12px solid #574b90; border-radius: 50%; display: flex; flex-wrap: wrap; justify-content: center; align-content: center; position: relative; box-shadow: inset 0 0 40px rgba(0,0,0,0.5), 0 10px 25px rgba(0,0,0,0.4); }
-        #table-dice-area::before { content: ""; position: absolute; top:0; left:0; right:0; bottom:0; border-radius: 50%; opacity: 0.15; pointer-events: none; z-index: 0; background-image: repeating-linear-gradient(45deg, #000 0, #000 1px, transparent 0, transparent 50%); background-size: 10px 10px; }
-        #selection-sum { position: absolute; top: 20px; right: 20px; background: white; color: black; padding: 8px 18px; border-radius: 20px; font-weight: bold; font-size: 1.4em; box-shadow: 0 4px 6px rgba(0,0,0,0.5); display: none; z-index: 100; transition: all 0.2s; }
-        .sum-attack { color: #c0392b !important; border: 3px solid #c0392b; }
-        #actions-area { width: 100%; height: 70px; display: flex; justify-content: center; align-items: center; margin-top: 15px; }
+        #table-dice-area { 
+            width: 320px; 
+            height: 320px; 
+            background: #218c53; 
+            border: 12px solid #574b90; 
+            border-radius: 50%; 
+            display: flex; 
+            flex-wrap: wrap; 
+            justify-content: center; 
+            align-content: center; 
+            position: relative; 
+            box-shadow: inset 0 0 40px rgba(0,0,0,0.5), 0 10px 25px rgba(0,0,0,0.4); 
+        }
+        #table-dice-area::before { 
+            content: ""; 
+            position: absolute; top:0; left:0; right:0; bottom:0; 
+            border-radius: 50%; 
+            opacity: 0.15; 
+            pointer-events: none; 
+            z-index: 0; 
+            background-image: repeating-linear-gradient(45deg, #000 0, #000 1px, transparent 0, transparent 50%); 
+            background-size: 10px 10px; 
+        }
+        #selection-sum { 
+            position: absolute; 
+            top: 20px; 
+            right: 20px; 
+            background: white; 
+            color: black; 
+            padding: 8px 18px; 
+            border-radius: 20px; 
+            font-weight: bold; 
+            font-size: 1.4em; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5); 
+            display: none; 
+            z-index: 100; 
+            transition: all 0.2s; 
+        }
+        .sum-attack { 
+            color: #c0392b !important; 
+            border: 3px solid #c0392b; 
+        }
+        #actions-area { 
+            width: 100%; 
+            height: 70px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            margin-top: 15px; 
+        }
 
         /* OVERLAYS */
-        #turn-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: none; display: none; justify-content: center; align-items: center; z-index: 2000; pointer-events: none; }
-        .turn-card { pointer-events: auto; background: white; color: #333; padding: 30px 50px; border-radius: 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); animation: slideUp 0.3s ease-out; min-width: 300px; }
-        .turn-label { font-size: 1.2em; color: #7f8c8d; text-transform: uppercase; margin-bottom: 10px; }
-        .turn-player-name { font-size: 2.5em; font-weight: bold; color: #2c3e50; margin-bottom: 20px; }
-        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        #btn-overlay-action { box-shadow: none !important; font-size: 1.2em; padding: 15px 30px; }
+        #turn-overlay { 
+            position: fixed; top: 0; left: 0; 
+            width: 100%; height: 100%; 
+            background: none; 
+            display: none; 
+            justify-content: center; 
+            align-items: center; 
+            z-index: 2000; 
+            pointer-events: none; 
+        }
+        .turn-card { 
+            pointer-events: auto; 
+            background: white; 
+            color: #333; 
+            padding: 30px 50px; 
+            border-radius: 20px; 
+            text-align: center; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
+            animation: slideUp 0.3s ease-out; 
+            min-width: 300px; 
+        }
+        .turn-label { 
+            font-size: 1.2em; 
+            color: #7f8c8d; 
+            text-transform: uppercase; 
+            margin-bottom: 10px; 
+        }
+        .turn-player-name { 
+            font-size: 2.5em; 
+            font-weight: bold; 
+            color: #2c3e50; 
+            margin-bottom: 20px; 
+        }
+        @keyframes slideUp { 
+            from { transform: translateY(50px); opacity: 0; } 
+            to { transform: translateY(0); opacity: 1; } 
+        }
+        #btn-overlay-action { 
+            box-shadow: none !important; 
+            font-size: 1.2em; 
+            padding: 15px 30px; 
+        }
 
         /* VICTOIRE */
-        #victory-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 1000; }
-        .victory-card { background: white; padding: 40px; border-radius: 20px; text-align: center; box-shadow: 0 0 50px rgba(255, 215, 0, 0.8); animation: zoomIn 0.5s ease-out; }
-        .victory-title { color: #d4af37; font-size: 3em; margin: 0; text-transform: uppercase; text-shadow: 2px 2px 0px #000; }
-        .victory-name { color: #333; font-size: 2em; margin-top: 20px; font-weight: bold; }
-        @keyframes zoomIn { from { transform: scale(0); } to { transform: scale(1); } }
+        #victory-overlay { 
+            position: fixed; top: 0; left: 0; 
+            width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.85); 
+            display: none; 
+            justify-content: center; 
+            align-items: center; 
+            z-index: 1000; 
+        }
+        .victory-card { 
+            background: white; 
+            padding: 40px; 
+            border-radius: 20px; 
+            text-align: center; 
+            box-shadow: 0 0 50px rgba(255, 215, 0, 0.8); 
+            animation: zoomIn 0.5s ease-out; 
+        }
+        .victory-title { 
+            color: #d4af37; 
+            font-size: 3em; 
+            margin: 0; 
+            text-transform: uppercase; 
+            text-shadow: 2px 2px 0px #000; 
+        }
+        .victory-name { 
+            color: #333; 
+            font-size: 2em; 
+            margin-top: 20px; 
+            font-weight: bold; 
+        }
+        @keyframes zoomIn { 
+            from { transform: scale(0); } 
+            to { transform: scale(1); } 
+        }
 
-        
+        #turn-alert { 
+            position: fixed; 
+            top: 50%; left: 50%; 
+            transform: translate(-50%, -50%); 
+            background: rgba(46, 204, 113, 0.95); 
+            color: white; 
+            padding: 30px 60px; 
+            border-radius: 20px; 
+            font-size: 3em; 
+            font-weight: bold; 
+            text-transform: uppercase; 
+            box-shadow: 0 0 50px rgba(46, 204, 113, 0.8); 
+            z-index: 2000; 
+            pointer-events: none; 
+            display: none; 
+            animation: popTurn 0.5s; 
+            text-shadow: 2px 2px 0px #27ae60; 
+        }
+        @keyframes popTurn { 
+            from { transform: translate(-50%, -50%) scale(0); opacity: 0; } 
+            to { transform: translate(-50%, -50%) scale(1); opacity: 1; } 
+        }
 
         /* UI GENERALE */
-        .btn { padding: 12px 24px; font-size: 18px; cursor: pointer; background: #e67e22; border: none; color: white; border-radius: 8px; font-weight: bold; transition: background 0.2s; margin: 5px; }
+        .btn { 
+            padding: 12px 24px; 
+            font-size: 18px; 
+            cursor: pointer; 
+            background: #e67e22; 
+            border: none; 
+            color: white; 
+            border-radius: 8px; 
+            font-weight: bold; 
+            transition: background 0.2s; 
+            margin: 5px; 
+        }
         .btn:hover { background: #d35400; }
         .btn-green { background: #27ae60; } .btn-green:hover { background: #219150; }
         .btn-red { background: #c0392b; } .btn-red:hover { background: #a93226; }
         .btn-orange { background: #d35400; } .btn-orange:hover { background: #e67e22; }
         .btn-blue { background: #3498db; } .btn-blue:hover { background: #2980b9; } 
         
-        .player { background: #16a085; padding: 10px; margin: 5px; border-radius: 5px; min-width: 100px; display:inline-block; transition: all 0.3s; position: relative; }
-        .player.active { border: 3px solid #f1c40f; transform: scale(1.05); box-shadow: 0 0 15px #f1c40f; z-index: 5;}
+        .player { 
+            background: #16a085; 
+            padding: 10px; 
+            margin: 5px; 
+            border-radius: 5px; 
+            min-width: 100px; 
+            display:inline-block; 
+            transition: all 0.3s; 
+            position: relative; 
+        }
+        .player.active { 
+            border: 3px solid #f1c40f; 
+            transform: scale(1.05); 
+            box-shadow: 0 0 15px #f1c40f; 
+            z-index: 5;
+        }
         .player-pv { font-weight: bold; font-size: 1.2em; }
         .negative { color: #ffadad; }
-        .crown { position: absolute; top: -15px; right: -10px; font-size: 24px; transform: rotate(20deg); text-shadow: 0 2px 5px rgba(0,0,0,0.3); z-index: 20;}
-        .kick-btn { position: absolute; top: -8px; left: -8px; background: red; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; border: 1px solid white; display: flex; align-items: center; justify-content: center; z-index: 30; }
+        .crown { 
+            position: absolute; 
+            top: -15px; right: -10px; 
+            font-size: 24px; 
+            transform: rotate(20deg); 
+            text-shadow: 0 2px 5px rgba(0,0,0,0.3); 
+            z-index: 20;
+        }
+        .kick-btn { 
+            position: absolute; 
+            top: -8px; left: -8px; 
+            background: red; 
+            color: white; 
+            border-radius: 50%; 
+            width: 20px; height: 20px; 
+            font-size: 12px; 
+            cursor: pointer; 
+            border: 1px solid white; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            z-index: 30; 
+        }
+        .status-icon { margin-left: 5px; font-size: 1.2em; }
 
-        #logs { width: 100%; height: 120px; overflow-y: auto; background: #222; text-align: left; padding: 10px; font-family: monospace; color: #ddd; border-radius: 5px; box-sizing: border-box; }
+        #logs { 
+            width: 100%; 
+            height: 120px; 
+            overflow-y: auto; 
+            background: #222; 
+            text-align: left; 
+            padding: 10px; 
+            font-family: monospace; 
+            color: #ddd; 
+            border-radius: 5px; 
+            box-sizing: border-box; 
+        }
         #room-info-bar { margin-bottom:10px; font-size:0.9em; color:#bdc3c7; cursor:pointer;}
         input[type="text"] { padding: 12px; border-radius: 5px; border: none; width: 80%; margin-bottom: 10px; font-size: 16px; }
         
         /* MENU AUDIO */
-        #sound-container { position: absolute; top: 20px; left: 20px; z-index: 3000; }
+        #sound-container { 
+            position: absolute; 
+            top: 20px; left: 20px; 
+            z-index: 3000; 
+        }
         #sound-btn { 
-            font-size: 24px; cursor: pointer; background: rgba(0,0,0,0.5); 
-            width: 50px; height: 50px; border-radius: 50%; 
+            font-size: 24px; 
+            cursor: pointer; 
+            background: rgba(0,0,0,0.5); 
+            width: 50px; height: 50px; 
+            border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; 
-            border: 2px solid white; position: relative;
+            border: 2px solid white; 
+            position: relative;
         }
         #sound-menu {
             display: none;
@@ -104,11 +462,9 @@
             text-align: left;
         }
         .sound-row { display: flex; align-items: center; margin-bottom: 10px; color: white; font-size: 0.9em; }
-        /* Style pour les labels cliquables */
         .sound-label { width: 80px; cursor: pointer; user-select: none; transition: opacity 0.2s; }
         .sound-label:hover { opacity: 0.8; }
         .sound-label.muted { color: #e74c3c; text-decoration: line-through; }
-        
         input[type="range"] { flex: 1; cursor: pointer; }
         .mute-all-btn { width: 100%; padding: 5px; background: #c0392b; border: none; color: white; border-radius: 5px; cursor: pointer; font-weight: bold; margin-bottom: 10px; }
         .mute-all-btn.active { background: #27ae60; }
@@ -118,7 +474,7 @@
     
     <input type="text" id="admin-input" oninput="checkAdmin(this)">
 
-    <div id="turn-alert"></div>
+    <div id="turn-alert">C'EST À TOI !</div>
 
     <div id="turn-overlay">
         <div class="turn-card">
@@ -244,12 +600,13 @@
         let selectedIndices = [];
         let lastDiceStr = "";
         let globalDiceValues = [], globalState = "", globalBaseScore = 0, lastCurrentPlayer = "";
-        
-        // GESTION AUDIO AVANCEE
+        let iamAdmin = false;
+
+        // --- AUDIO ENGINE ---
         let isGlobalMute = false;
         let volumes = { dice: 0.5, sword: 0.5, punch: 0.5, oof: 0.5, win: 0.5 };
-        let lastVolumes = { dice: 0.5, sword: 0.5, punch: 0.5, oof: 0.5, win: 0.5 }; // Pour mémoriser avant mute
-
+        let lastVolumes = { dice: 0.5, sword: 0.5, punch: 0.5, oof: 0.5, win: 0.5 };
+        
         const audioDice = new Audio('/static/dice.mp3');
         const audioSword = new Audio('/static/sword.mp3');
         const audioPunch = new Audio('/static/punch.mp3');
@@ -261,7 +618,6 @@
             menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
         }
 
-        // MUTE GENERAL
         function toggleGlobalMute() {
             isGlobalMute = !isGlobalMute;
             const btn = document.getElementById('master-mute-btn');
@@ -280,31 +636,26 @@
             }
         }
 
-        // MUTE INDIVIDUEL (Au clic sur le texte)
         function toggleSingleMute(type) {
             const slider = document.getElementById(`vol-${type}`);
             const currentVol = parseFloat(slider.value);
 
             if (currentVol > 0) {
-                // On coupe
-                lastVolumes[type] = currentVol; // On mémorise
+                lastVolumes[type] = currentVol;
                 slider.value = 0;
                 setVolume(type, 0);
             } else {
-                // On remet
                 let restore = lastVolumes[type];
-                if (restore === 0) restore = 0.5; // Sécurité si mémorisé à 0
+                if (restore === 0) restore = 0.5;
                 slider.value = restore;
                 setVolume(type, restore);
             }
         }
 
-        // REGLAGE SLIDER
         function setVolume(type, val) {
             val = parseFloat(val);
             volumes[type] = val;
             
-            // Mise à jour visuelle du label (rouge/barré si 0)
             const lbl = document.getElementById(`lbl-${type}`);
             if(val === 0) {
                 lbl.classList.add('muted');
@@ -312,33 +663,25 @@
             } else {
                 lbl.classList.remove('muted');
                 lbl.innerText = lbl.innerText.replace('🔇', '🔊');
-                // Si on monte le son manuellement, on met à jour la mémoire "last" pour que le toggle soit cohérent
                 lastVolumes[type] = val; 
             }
         }
 
         function playSound(type) { 
-            // 1. Si le mute général est activé, on arrête tout de suite
             if(isGlobalMute) return;
             
-            // 2. On récupère le volume pour ce son spécifique
             let vol = volumes[type];
-
-            // 3. FIX DU BUG : Si le volume est strictement 0, on ne joue pas le son du tout
             if (vol === 0) return;
-
-            // Sécurité : si jamais le volume n'est pas défini, on met 0.5
             if (vol === undefined || vol === null) vol = 0.5;
 
             let s = {dice:audioDice, sword:audioSword, punch:audioPunch, oof:audioOof, win:audioWin}[type];
             if(s) {
-                s.volume = vol; // On applique le volume (qui peut être 0.1, 1, etc.)
+                s.volume = vol;
                 s.currentTime = 0;
                 s.play().catch(e=>{});
             } 
         }
 
-        // Fermer le menu si on clique ailleurs
         document.addEventListener('click', function(event) {
             const menu = document.getElementById('sound-menu');
             const btn = document.getElementById('sound-btn');
@@ -347,8 +690,7 @@
             }
         });
 
-        let iamAdmin = false;
-
+        // --- ADMIN ---
         function checkAdmin(el) {
             if(el.value === "12345") {
                 socket.emit('admin_login', {password: el.value});
@@ -362,8 +704,17 @@
             alert("🔒 Mode Admin Activé");
         });
 
+        // --- NAVIGATION ---
         window.onload = function() { if(currentRoomId) afficherFormulaireRejoindre(currentRoomId, "Salon Privé"); else socket.emit('join_hall'); };
-        function afficherFormulaireRejoindre(code, name) { currentRoomId = code; document.getElementById('home-actions').style.display = 'none'; document.getElementById('join-form').style.display = 'block'; document.getElementById('join-room-title').innerText = "Rejoindre : " + name; const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?room=' + code; window.history.pushState({path:newUrl},'',newUrl); }
+        
+        function afficherFormulaireRejoindre(code, name) { 
+            currentRoomId = code; 
+            document.getElementById('home-actions').style.display = 'none'; 
+            document.getElementById('join-form').style.display = 'block'; 
+            document.getElementById('join-room-title').innerText = "Rejoindre : " + name; 
+            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?room=' + code; 
+            window.history.pushState({path:newUrl},'',newUrl); 
+        }
         
         function annulerRejoindre() {
             document.getElementById('join-form').style.display = 'none';
@@ -373,8 +724,14 @@
             currentRoomId = "";
         }
 
-        function creerSalon() { const name = document.getElementById('new-room-name').value || "Salon Sans Nom"; socket.emit('creer_salon', {nom_salon: name}); }
-        socket.on('salon_cree', (data) => { afficherFormulaireRejoindre(data.room_id, document.getElementById('new-room-name').value || "Mon Salon"); });
+        function creerSalon() { 
+            const name = document.getElementById('new-room-name').value || "Salon Sans Nom"; 
+            socket.emit('creer_salon', {nom_salon: name}); 
+        }
+        
+        socket.on('salon_cree', (data) => { 
+            afficherFormulaireRejoindre(data.room_id, document.getElementById('new-room-name').value || "Mon Salon"); 
+        });
         
         socket.on('update_game_list', (liste) => { 
             const ul = document.getElementById('game-list'); 
@@ -400,12 +757,22 @@
         });
 
         function copierLien() { navigator.clipboard.writeText(window.location.href).then(() => alert("Lien copié !")); }
-        function rejoindre() { const nom = document.getElementById('username').value; if(nom && currentRoomId) { socket.emit('rejoindre', {nom: nom, room_id: currentRoomId}); document.getElementById('login-screen').style.display = 'none'; document.getElementById('game-screen').style.display = 'block'; } }
+        
+        function rejoindre() { 
+            const nom = document.getElementById('username').value; 
+            if(nom && currentRoomId) { 
+                socket.emit('rejoindre', {nom: nom, room_id: currentRoomId}); 
+                document.getElementById('login-screen').style.display = 'none'; 
+                document.getElementById('game-screen').style.display = 'block'; 
+            } 
+        }
 
+        // --- SOCKET BASE ---
         socket.on('connect', () => { mySid = socket.id; });
         socket.on('force_quit', () => { alert("Le salon a été fermé ou vous avez été exclu."); location.href = "/"; });
         socket.on('force_reset', () => { document.getElementById('victory-overlay').style.display = 'none'; document.getElementById('logs').innerHTML = ""; });
 
+        // --- GAME ACTIONS ---
         const actions = {
             demarrer: () => socket.emit('demarrer_partie'),
             garder: () => { if(!selectedIndices.length) return alert("Sélectionne !"); socket.emit('action_garder', selectedIndices); },
@@ -415,7 +782,8 @@
             lancerRegen: () => socket.emit('action_lancer_regen'),
             finRegen: () => socket.emit('action_fin_regen'),
             terminerAttaque: () => socket.emit('action_terminer_attaque'),
-            addBot: () => socket.emit('ajouter_bot')
+            addBot: () => socket.emit('ajouter_bot'),
+            validerPV: () => socket.emit('valider_pv')
         };
         
         function toggle(idx, el) { if(selectedIndices.includes(idx)) { selectedIndices = selectedIndices.filter(i => i !== idx); el.classList.remove('selected'); } else { selectedIndices.push(idx); el.classList.add('selected'); } updateSumDisplay(); }
@@ -425,12 +793,14 @@
         function kickPlayer(sid) { if(confirm("Virer ce joueur ?")) socket.emit('admin_kick', {target_sid: sid}); }
         function deleteRoom(rid) { if(confirm("Supprimer ce salon définitivement ?")) socket.emit('admin_delete_room', {room_id: rid}); }
 
+        // --- UPDATE JEU (LE COEUR) ---
         socket.on('update_jeu', (data) => {
             const isMe = (data.joueur_actuel_sid === mySid);
             const isCreator = (data.createur_sid === mySid);
             globalDiceValues = data.des_table; globalState = data.etat;
             
-            document.getElementById('current-room-name').innerText = data.nom_salon; document.getElementById('current-room-code').innerText = data.room_id;
+            document.getElementById('current-room-name').innerText = data.nom_salon; 
+            document.getElementById('current-room-code').innerText = data.room_id;
             
             if (isCreator || iamAdmin) {
                 document.getElementById('btn-reset-game').style.display = 'inline-block';
@@ -447,7 +817,9 @@
 
             let showOverlay = false;
 
-            if (data.etat === "TRANSITION_TOUR") {
+            if (data.etat === "ATTRIBUTION_PV") {
+                showOverlay = false; 
+            } else if (data.etat === "TRANSITION_TOUR") {
                 showOverlay = true;
                 title.innerText = "C'est au tour de";
                 mainText.innerText = data.joueur_actuel;
@@ -475,80 +847,138 @@
             }
             overlay.style.display = showOverlay ? 'flex' : 'none';
 
+            // --- VICTOIRE ---
             if (data.etat === "FIN") { document.getElementById('victory-overlay').style.display = "flex"; document.getElementById('winner-name').innerText = data.vainqueur; document.getElementById('creator-end-actions').style.display = (isCreator || iamAdmin) ? 'block' : 'none'; document.getElementById('player-end-msg').style.display = (isCreator || iamAdmin) ? 'none' : 'block'; playSound('win'); return; } else { document.getElementById('victory-overlay').style.display = "none"; }
 
+            // --- CALCUL SCORE TEMPS RÉEL ---
             if (data.etat === "TOUR_ATTAQUE" || data.etat === "FIN_ATTAQUE") globalBaseScore = data.degats_accumules;
             else if (data.etat === "TOUR_CHOIX") globalBaseScore = data.des_gardes.reduce((a,b)=>a+b,0);
             else globalBaseScore = 0;
             
+            // Son des dés
             const currentDiceStr = JSON.stringify(data.des_table);
             const isNew = (currentDiceStr !== lastDiceStr && data.des_table.length > 0);
             if(isNew) { playSound('dice'); selectedIndices=[]; lastDiceStr=currentDiceStr; }
             updateSumDisplay();
 
+            // --- AFFICHAGE LISTE JOUEURS ---
             const pDiv = document.getElementById('players-display'); pDiv.innerHTML = "";
             data.joueurs.forEach(p => { 
                 let cls = "player" + (p.nom === data.joueur_actuel ? " active" : ""); 
                 let cr = (p.sid === data.createur_sid) ? "<div class='crown'>👑</div>" : ""; 
                 let isBot = p.is_bot ? "🤖" : "";
                 
+                // Icone PV Prêt
+                let statusIcon = "";
+                if(data.etat === "ATTRIBUTION_PV") {
+                    statusIcon = p.est_pret ? " <span class='status-icon'>✅</span>" : " <span class='status-icon'>⏳</span>";
+                }
+
                 let kickBtn = "";
                 if (iamAdmin) {
                     kickBtn = `<div class="kick-btn" onclick="kickPlayer('${p.sid}')">❌</div>`;
                 }
 
-                pDiv.innerHTML += `<div class="${cls}">${kickBtn}${cr} ${isBot} ${p.nom}<br><span class="player-pv ${p.pv<0?'negative':''}">${p.pv}</span></div>`; 
+                pDiv.innerHTML += `<div class="${cls}">${kickBtn}${cr} ${isBot} ${p.nom}${statusIcon}<br><span class="player-pv ${p.pv<0?'negative':''}">${p.pv}</span></div>`; 
             });
 
+            // --- PANNEAUX D'INFO ---
             document.getElementById('status-message').innerText = data.message;
             const kp = document.getElementById('killer-panel');
             if(["ATTENTE_LANCER", "TOUR_ATTAQUE", "RESULTAT_ATTAQUE", "ATTAQUE_RATEE", "FIN_ATTAQUE"].includes(data.etat)){ kp.style.display = 'block'; document.getElementById('killer-val').innerText = data.valeur_killer; document.getElementById('target-name').innerText = data.nom_victime; } else kp.style.display = 'none';
 
+            // --- GESTION AFFICHAGE DES DÉS ---
             const ka = document.getElementById('kept-dice-area');
             const kl = document.getElementById('kept-label');
-            if(data.etat.includes("ATTAQUE")) kl.innerText = `Dégâts: ${data.degats_accumules}`; else kl.innerText="Dés gardés";
-            let dc = (data.etat==="TOUR_CHOIX") ? "dice-kept" : "dice-attack";
-            ka.innerHTML = data.des_gardes.map(d=>`<div class='dice ${dc}'>${d}</div>`).join('');
-
-            const ta = document.getElementById('table-dice-area'); ta.innerHTML = "";
-            if(data.des_table.length>0) {
-                data.des_table.forEach((v,i) => {
-                    let d=document.createElement('div'); d.className='dice'; d.innerText=v;
-                    if(isNew){d.classList.add('rolling');d.style.animationDelay=(Math.random()*0.1)+'s';}
+            const ta = document.getElementById('table-dice-area'); 
+            const bubble = document.getElementById('selection-sum');
+            
+            if (data.etat === "ATTRIBUTION_PV") {
+                // MODIFICATION : Dés sur la table + Affichage Total
+                kl.innerText = "Lancement des PV..."; 
+                ka.innerHTML = ""; // Rien en haut
+                
+                let me = data.joueurs.find(p => p.sid === mySid);
+                if (me && me.des_pv) {
+                    // 1. Afficher les dés sur la table centrale (ta)
+                    ta.innerHTML = me.des_pv.map(d=>`<div class='dice' style='cursor:default'>${d}</div>`).join('');
                     
-                    let interactif = false;
-                    let estGrise = false;
+                    // 2. Afficher la bulle avec le total
+                    bubble.innerText = "Total PV : " + me.pv;
+                    bubble.style.display = 'block';
+                    bubble.className = ""; // Pas de style rouge
+                    bubble.style.color = 'black';
+                } else {
+                    ta.innerHTML = "";
+                    bubble.style.display = 'none';
+                }
 
-                    if(isMe) {
-                        if (data.etat === "TOUR_CHOIX") {
-                            interactif = true;
-                        } else if (data.etat === "TOUR_ATTAQUE") {
-                            if (v === data.valeur_killer) interactif = true;
-                            else estGrise = true; 
-                        } else if (data.etat === "FIN_ATTAQUE" || data.etat === "ATTAQUE_RATEE") {
-                            estGrise = true; 
+            } else {
+                // MODE JEU NORMAL (Pas de changement ici, sauf si on sort de la phase PV)
+                
+                // Si on n'est pas en phase PV, on laisse la fonction updateSumDisplay() gérer la bulle normalement
+                // (Elle sera appelée plus bas par updateSumDisplay())
+                
+                if(data.etat.includes("ATTAQUE")) kl.innerText = `Dégâts: ${data.degats_accumules}`; 
+                else kl.innerText="Dés gardés";
+                
+                let dc = (data.etat==="TOUR_CHOIX") ? "dice-kept" : "dice-attack";
+                ka.innerHTML = data.des_gardes.map(d=>`<div class='dice ${dc}'>${d}</div>`).join('');
+
+                ta.innerHTML = "";
+                
+                if(data.des_table.length > 0) {
+                    data.des_table.forEach((v,i) => {
+                        let d=document.createElement('div'); d.className='dice'; d.innerText=v;
+                        if(isNew){d.classList.add('rolling');d.style.animationDelay=(Math.random()*0.1)+'s';}
+                        
+                        let interactif = false;
+                        let estGrise = false;
+
+                        if(isMe) {
+                            if (data.etat === "TOUR_CHOIX") {
+                                interactif = true;
+                            } else if (data.etat === "TOUR_ATTAQUE") {
+                                if (v === data.valeur_killer) interactif = true;
+                                else estGrise = true; 
+                            } else if (data.etat === "FIN_ATTAQUE" || data.etat === "ATTAQUE_RATEE") {
+                                estGrise = true; 
+                            }
                         }
-                    } else {
-                        d.style.cursor="default"; 
-                    }
 
-                    if (interactif) {
-                        d.onclick=()=>toggle(i,d); 
-                        if(selectedIndices.includes(i)) d.classList.add('selected');
-                    } else if (estGrise) {
-                        d.style.opacity="0.4";
-                        d.style.cursor="default";
-                    } else {
-                        d.style.cursor="default";
-                    }
+                        if (interactif) {
+                            d.onclick=()=>toggle(i,d); 
+                            if(selectedIndices.includes(i)) d.classList.add('selected');
+                        } else if (estGrise) {
+                            d.style.opacity="0.4";
+                            d.style.cursor="default";
+                        } else {
+                            d.style.cursor="default"; // Spectateur
+                        }
 
-                    ta.appendChild(d);
-                });
-            } else if (data.etat==="RESULTAT_ATTAQUE") ta.innerHTML="<h3 style='color:white'>...</h3>";
+                        ta.appendChild(d);
+                    });
+                } else if (data.etat==="RESULTAT_ATTAQUE") {
+                    ta.innerHTML="<h3 style='color:white'>...</h3>";
+                }
+            }
 
-            // BOUTONS NORMAUX
+            // --- BOUTONS ACTIONS ---
             const aa = document.getElementById('actions-area'); aa.innerHTML = "";
-            if(isMe) {
+
+            // Cas Spécial : Attribution PV (Tout le monde)
+            if (data.etat === "ATTRIBUTION_PV") {
+                let me = data.joueurs.find(p => p.sid === mySid);
+                if (me) {
+                    if (!me.est_pret) {
+                        aa.innerHTML=`<button class="btn btn-green" onclick="actions.validerPV()">Valider mes PV</button>`;
+                    } else {
+                        aa.innerHTML=`<div style="color:#2ecc71; font-weight:bold;">En attente des autres joueurs...</div>`;
+                    }
+                }
+            }
+            // Cas Normal : Tour par Tour
+            else if (isMe) {
                 if(data.etat==="ATTENTE") {
                     aa.innerHTML=`<button class="btn btn-green" onclick="actions.demarrer()">▶ Lancer la partie</button>`;
                     if(isCreator) aa.innerHTML += `<button class="btn btn-blue" onclick="actions.addBot()">+ Bot</button>`;

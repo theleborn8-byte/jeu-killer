@@ -6,7 +6,7 @@ import time
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'killer_secret_key'
-socketio = SocketIO(app, cors_allowed_origins='*')
+socketio = SocketIO(app, async_mode='threading', cors_allowed_origins='*')
 
 # --- GLOBALS ---
 games = {}
@@ -19,10 +19,19 @@ class Joueur:
         self.sid = sid
         self.nom = nom
         self.pv = 0
+        self.des_pv = [] 
+        self.est_pret = False 
         self.is_bot = is_bot 
 
     def to_dict(self):
-        return {'nom': self.nom, 'pv': self.pv, 'sid': self.sid, 'is_bot': self.is_bot}
+        return {
+            'nom': self.nom, 
+            'pv': self.pv, 
+            'sid': self.sid, 
+            'is_bot': self.is_bot,
+            'est_pret': self.est_pret,
+            'des_pv': self.des_pv if self.des_pv else []
+        }
 
 class Partie:
     def __init__(self, room_id, nom_salon):
@@ -39,6 +48,9 @@ class Partie:
         self.createur_sid = self.joueurs[0].sid if self.joueurs else None
         self.valeur_killer, self.liste_victimes = 0, []
         self.victime_actuelle_idx, self.degats_accumules = -1, 0
+        
+        # MODIFICATION : Liste pour stocker qui était vivant au début du tour
+        self.ids_vivants_debut_tour = []
 
     def verifier_proprietaire(self):
         chef_actuel = next((p for p in self.joueurs if p.sid == self.createur_sid), None)
@@ -65,8 +77,9 @@ class Partie:
         
         broadcast_game_list()
         
+        # Gestion Bots
         cur = self.get_joueur_actuel()
-        if cur and cur.is_bot and self.etat != "FIN" and self.etat != "ATTENTE":
+        if cur and cur.is_bot and self.etat != "FIN" and self.etat != "ATTENTE" and self.etat != "ATTRIBUTION_PV":
             socketio.start_background_task(bot_play_turn, self)
 
     def get_info_publique(self):
@@ -76,18 +89,45 @@ class Partie:
         if not self.joueurs: return None
         return self.joueurs[self.joueur_actuel_idx]
 
+    # --- MODIFICATION PRINCIPALE ICI ---
     def passer_suivant(self):
+        # 1. On regarde qui est vivant (PV >= 0) MAINTENANT
         survivants = [j for j in self.joueurs if j.pv >= 0]
+        
+        # Condition de fin : Il reste 1 seul survivant OU tout le monde est mort (0 survivant)
         if len(self.joueurs) > 1 and len(survivants) <= 1:
-            self.vainqueur = survivants[0].nom if survivants else "Personne"
+            
+            if len(survivants) == 1:
+                # Cas standard : Il reste un vrai survivant
+                self.vainqueur = survivants[0].nom
+            else:
+                # Cas "Tout le monde est mort ce tour-ci"
+                # On départage parmi ceux qui étaient vivants AU DÉBUT DU TOUR
+                candidats = [j for j in self.joueurs if j.sid in self.ids_vivants_debut_tour]
+                
+                # Sécurité (si bug vide), on prend tout le monde
+                if not candidats: candidats = self.joueurs
+                
+                # On trie par PV décroissant (le moins négatif gagne : ex -7 gagne contre -10)
+                candidats.sort(key=lambda x: x.pv, reverse=True)
+                
+                if candidats:
+                    self.vainqueur = candidats[0].nom
+                else:
+                    self.vainqueur = "Personne"
+
             self.etat = "FIN"
             self.broadcast_etat(f"🏆 VICTOIRE ! {self.vainqueur} gagne !")
-        elif len(survivants) == 0:
-            self.vainqueur, self.etat = "Personne", "FIN"
-            self.broadcast_etat("Match nul ?")
+        
         else:
+            # La partie continue
             self.joueur_actuel_idx = (self.joueur_actuel_idx + 1) % len(self.joueurs)
             self.des_gardes, self.des_sur_table, self.etat = [], [], "TRANSITION_TOUR"
+            
+            # IMPORTANT : On met à jour la liste des éligibles pour le PROCHAIN tour
+            # Seuls ceux qui sont positifs maintenant pourront gagner si tout le monde meurt au prochain tour
+            self.ids_vivants_debut_tour = [j.sid for j in survivants]
+            
             self.broadcast_etat(f"Au tour de {self.joueurs[self.joueur_actuel_idx].nom}")
 
     def lancer_des(self, nombre):
@@ -108,13 +148,42 @@ class Partie:
             return
         self.victime_actuelle_idx = self.liste_victimes.pop(0)
         self.degats_accumules = 0 
-        self.des_gardes = []      
-        self.des_sur_table = []   
+        self.des_gardes = []       
+        self.des_sur_table = []    
         self.etat = "ATTENTE_LANCER"
         nom_cible = self.joueurs[self.victime_actuelle_idx].nom
         self.broadcast_etat(f"Prêt à attaquer {nom_cible} ?")
 
-# --- CERVEAU DU BOT ---
+# --- FONCTION BOT VALIDATION PV ---
+def bot_validate_sequence(jeu):
+    """Simule les bots qui regardent leurs PV et valident"""
+    bots = [p for p in jeu.joueurs if p.is_bot]
+    for bot in bots:
+        time.sleep(random.uniform(1.0, 3.0))
+        
+        if jeu.etat != "ATTRIBUTION_PV": return
+
+        with app.app_context():
+            bot.est_pret = True
+            socketio.emit('notification', {'msg': f"🤖 {bot.nom} a validé ses PV.", 'sound':'dice'}, to=jeu.id)
+            jeu.broadcast_etat()
+            check_start_real_game(jeu)
+
+def check_start_real_game(jeu):
+    """Vérifie si tout le monde a validé pour lancer le 1er tour"""
+    if all(p.est_pret for p in jeu.joueurs):
+        jeu.joueurs.sort(key=lambda p: p.pv) # On trie par PV
+        jeu.joueur_actuel_idx = 0
+        jeu.etat = "TRANSITION_TOUR"
+        
+        # MODIFICATION : Initialisation des "Vivants" au tout début de la partie réelle
+        jeu.ids_vivants_debut_tour = [p.sid for p in jeu.joueurs if p.pv >= 0]
+        
+        noms = " > ".join([p.nom for p in jeu.joueurs])
+        emit('notification', {'msg': f"Tout le monde est prêt ! Ordre : {noms}", 'sound': 'win'}, to=jeu.id)
+        jeu.broadcast_etat("La partie commence !")
+
+# --- CERVEAU DU BOT (JEU) ---
 def bot_play_turn(jeu):
     time.sleep(1.5)
     cur = jeu.get_joueur_actuel()
@@ -301,7 +370,7 @@ def handle_admin_login(data):
     if data.get('password') == '12345':
         admin_sids.add(request.sid)
         emit('admin_success', {'msg': "Mode Admin Activé"})
-        broadcast_game_list() # Pour afficher les poubelles dans le lobby
+        broadcast_game_list() 
         jeu = get_game(request.sid)
         if jeu: jeu.broadcast_etat()
 
@@ -324,7 +393,7 @@ def handle_admin_delete_room(data):
     if request.sid in admin_sids:
         rid = data.get('room_id')
         if rid in games:
-            socketio.emit('force_quit', to=rid) # Ejecte tout le monde
+            socketio.emit('force_quit', to=rid) 
             del games[rid]
             broadcast_game_list()
 
@@ -339,12 +408,25 @@ def handle_close():
 def handle_demarrer():
     jeu = get_game(request.sid)
     if jeu and len(jeu.joueurs) >= 2:
-        for j in jeu.joueurs: j.pv = sum([random.randint(1,6) for _ in range(5)])
-        jeu.joueurs.sort(key=lambda p: p.pv)
-        jeu.joueur_actuel_idx, jeu.etat = 0, "TRANSITION_TOUR"
-        noms = " > ".join([p.nom for p in jeu.joueurs])
-        emit('notification', {'msg': f"Ordre : {noms}"}, to=jeu.id)
-        jeu.broadcast_etat("C'est parti !")
+        jeu.etat = "ATTRIBUTION_PV"
+        
+        for j in jeu.joueurs:
+            j.des_pv = [random.randint(1,6) for _ in range(5)]
+            j.pv = sum(j.des_pv)
+            j.est_pret = False 
+        
+        jeu.broadcast_etat("Initialisation des PV...")
+        socketio.start_background_task(bot_validate_sequence, jeu)
+
+@socketio.on('valider_pv')
+def handle_valider_pv():
+    jeu = get_game(request.sid)
+    if jeu and jeu.etat == "ATTRIBUTION_PV":
+        joueur = next((p for p in jeu.joueurs if p.sid == request.sid), None)
+        if joueur:
+            joueur.est_pret = True
+            jeu.broadcast_etat() 
+            check_start_real_game(jeu)
 
 @socketio.on('valider_debut_tour')
 def handle_val():
@@ -426,16 +508,14 @@ def handle_g_atk(indices):
 @socketio.on('action_terminer_attaque')
 def handle_fin_atk():
     jeu = get_game(request.sid)
-    # On accepte FIN_ATTAQUE (succès partiel) ou ATTAQUE_RATEE (échec total)
     if jeu and (jeu.etat == "FIN_ATTAQUE" or jeu.etat == "ATTAQUE_RATEE"):
         victime = jeu.joueurs[jeu.victime_actuelle_idx]
         if jeu.degats_accumules > 0:
             victime.pv -= jeu.degats_accumules
             emit('notification', {'msg': f"💥 -{jeu.degats_accumules} pour {victime.nom}", 'sound':'punch'}, to=jeu.id)
         else:
-            emit('notification', {'msg': "Aucun dégât."}, to=jeu.id) # J'ai remis un petit son 'oof' discret si tu veux, sinon enlève 'sound'
+            emit('notification', {'msg': "Aucun dégât."}, to=jeu.id)
         
-        # MODIFICATION ICI : Au lieu de faire une pause, on enchaine direct
         jeu.preparer_prochaine_victime()
 
 @socketio.on('action_suivant')
